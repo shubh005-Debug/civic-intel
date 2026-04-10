@@ -44,3 +44,24 @@ checkpoints/
 
 # Temporary files
 *.tmp
+#launch.json folder
+.vscode/
+#Cache folder
+.alcache/
+#Symbols folder
+.alpackages/
+#Snapshots folder
+.snapshots/
+#Testing Output folder
+.output/
+#Extension App-file
+*.app
+#Rapid Application Development File
+rad.json
+#Translation Base-file
+*.g.xlf
+#License-file
+*.flf
+#Test results file
+TestResults.xml
+>>>>>>> 06efd4823fe0e524ff20f2b947209e80ec8190ed
