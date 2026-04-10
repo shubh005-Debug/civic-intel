@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Civic Intel — Admin Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0b1f4b;--blue:#1655f5;--blue2:#4a86ff;--cyan:#00c2e0;
+  --bg:#f4f8ff;--white:#fff;--border:#ccd8f8;--b2:#99b4f5;
+  --text:#0b1224;--t2:#2d4075;--t3:#7a93cc;
+  --red:#e5352b;--red-lt:#fff1f0;--red-mid:#ffb3ad;
+  --sh:0 4px 24px rgba(22,85,245,.1);
+  --font:'Sora',sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:linear-gradient(135deg,var(--navy) 0%,#0d2a6b 60%,#091840 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative}
+body::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(22,85,245,.12) 1px,transparent 1px);background-size:28px 28px}
+.card{background:var(--white);border-radius:20px;padding:2.8rem 2.4rem;width:420px;max-width:100%;box-shadow:0 20px 64px rgba(0,0,0,.35);position:relative}
+.brand{text-align:center;margin-bottom:2.2rem}
+.brand-icon{width:58px;height:58px;border-radius:16px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 1rem;box-shadow:0 6px 20px rgba(22,85,245,.4)}
+.brand h1{font-size:1.55rem;font-weight:800;color:var(--navy);margin-bottom:.3rem;letter-spacing:-.5px}
+.brand h1 span{color:var(--blue)}
+.brand p{font-size:.8rem;color:var(--t3);font-weight:300}
+.err{background:var(--red-lt);border:1px solid var(--red-mid);border-radius:10px;padding:.75rem 1rem;color:var(--red);font-size:.8rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:6px}
+.fg{display:flex;flex-direction:column;gap:.35rem;margin-bottom:1rem}
+label{font-size:.76rem;font-weight:600;color:var(--t2)}
+input{background:var(--bg);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:.72rem 1rem;font-family:var(--font);font-size:.88rem;outline:none;transition:border-color .15s,box-shadow .15s;width:100%}
+input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,85,245,.1);background:#fff}
+input::placeholder{color:var(--t3)}
+.btn{width:100%;background:linear-gradient(135deg,var(--blue),var(--navy));color:#fff;border:none;padding:.85rem;border-radius:11px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:var(--font);letter-spacing:-.1px;transition:all .15s;margin-top:.5rem;box-shadow:0 4px 16px rgba(22,85,245,.35)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(22,85,245,.45)}
+.hint{text-align:center;margin-top:1.3rem;font-size:.73rem;color:var(--t3)}
+.hint strong{color:var(--t2);font-weight:500}
+.hint a{color:var(--blue);text-decoration:none;font-weight:600}
+.hint a:hover{text-decoration:underline}
+.divider{display:flex;align-items:center;gap:.6rem;margin:1.2rem 0;color:var(--t3);font-size:.7rem}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="brand-icon">🏙</div>
+    <h1>Civic <span>Intel</span></h1>
+    <p>Admin — Complaint Intelligence Dashboard</p>
+  </div>
+  {% if error %}<div class="err">⚠ {{ error }}</div>{% endif %}
+  <form method="POST">
+    <div class="fg">
+      <label>Username</label>
+      <input type="text" name="username" placeholder="admin" autocomplete="username" required>
+    </div>
+    <div class="fg">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn">Sign In to Dashboard →</button>
+  </form>
+  <p class="hint">Default credentials: <strong>admin</strong> / <strong>admin123</strong><br><br>
+  <a href="/">← Back to Citizen Portal</a></p>
+</div>
+</body>
+</html>

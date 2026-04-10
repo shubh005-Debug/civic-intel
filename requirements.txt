@@ -1,0 +1,10 @@
+# CityPulse - Smart City Complaint Intelligence System
+# Python 3.8+ required
+
+flask>=2.3.0
+scikit-learn>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Optional but recommended:
+# nltk>=3.8.0  (system works without it - built-in stop words used)

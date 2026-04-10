@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Civic Intel — Live Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{
+  --navy:    #0b1f4b;
+  --blue:    #1655f5;
+  --blue2:   #4a86ff;
+  --cyan:    #00c2e0;
+  --bg:      #f4f8ff;
+  --white:   #ffffff;
+  --surf:    #eaf0ff;
+  --border:  #ccd8f8;
+  --border2: #99b4f5;
+  --accent:  #1655f5;
+  --accent2: #0b1f4b;
+  --accent-lt:#eaf0ff;
+  --accent-mid:#99b4f5;
+  --red:     #e5352b;
+  --red-lt:  #fff1f0;
+  --red-mid: #ffb3ad;
+  --amber:   #f59e0b;
+  --amber-lt:#fffbeb;
+  --green:   #10b981;
+  --green-lt:#f0fdf4;
+  --green-dk:#0a9977;
+  --text:    #0b1224;
+  --text2:   #2d4075;
+  --text3:   #7a93cc;
+  --shadow:  0 2px 8px rgba(22,85,245,.07),0 1px 3px rgba(0,0,0,.05);
+  --shadow-lg:0 8px 32px rgba(22,85,245,.12);
+  --font:    'Sora',sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);background:var(--bg)}
+
+/* LOADER */
+#loader{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .5s}
+#loader.out{opacity:0;pointer-events:none}
+.ld-logo{font-size:1.6rem;font-weight:800;color:var(--text)}.ld-logo span{color:var(--accent)}
+.ld-bar{width:160px;height:3px;background:var(--surface);border-radius:2px;overflow:hidden}
+.ld-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:ldFill 1.4s ease forwards}
+@keyframes ldFill{from{width:0}to{width:100%}}
+.ld-sub{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--text3)}
+
+/* TOPBAR */
+#topbar{position:fixed;top:0;left:0;right:0;z-index:500;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:var(--navy);border-bottom:none;box-shadow:0 2px 20px rgba(11,31,75,.45)}
+.brand{display:flex;align-items:center;gap:9px;font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:-.2px}
+.brand-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;box-shadow:0 2px 8px rgba(22,85,245,.4)}
+.brand em{color:var(--cyan);font-style:normal}
+.live-tag{display:flex;align-items:center;gap:6px;background:rgba(0,194,224,.12);border:1px solid rgba(0,194,224,.3);color:var(--cyan);padding:4px 11px;border-radius:999px;font-size:.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:blink 1.3s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.tb-right{display:flex;align-items:center;gap:6px}
+.tb-btn{padding:5px 12px;border-radius:7px;font-size:.76rem;font-weight:600;color:rgba(255,255,255,.75);text-decoration:none;border:1px solid rgba(255,255,255,.15);transition:all .15s;font-family:var(--font);cursor:pointer;background:rgba(255,255,255,.08)}
+.tb-btn:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.25);color:#fff}
+.tb-btn.red{background:var(--red);color:#fff;border-color:var(--red)}
+.tb-btn.red:hover{background:#c0281f}
+
+/* MAP */
+#map{position:fixed;inset:0;z-index:1}
+.leaflet-tile-pane{filter:none!important}
+
+/* PANEL */
+#panel{position:fixed;top:56px;left:0;bottom:0;width:300px;z-index:200;background:rgba(255,255,255,.96);border-right:1px solid var(--border);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.4,0,.2,1)}
+#panel.closed{transform:translateX(-300px)}
+.ptab{position:fixed;left:300px;top:calc(56px + 45%);transform:translateY(-50%);z-index:201;width:18px;height:44px;background:#fff;border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:8px;box-shadow:2px 0 8px rgba(0,0,0,.06);transition:all .28s}
+#panel.closed ~ .ptab{left:0;border-left:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px}
+.ptab:hover{background:var(--surface);color:var(--text)}
+
+/* STAT BAR */
+.stat-bar{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border);flex-shrink:0}
+.sc{padding:10px 4px;text-align:center;border-right:1px solid var(--border)}
+.sc:last-child{border-right:none}
+.sn{font-size:1.4rem;font-weight:800;line-height:1}
+.n-r{color:var(--red)}.n-a{color:var(--amber)}.n-g{color:var(--green)}.n-b{color:var(--accent)}
+.sl{font-size:.55rem;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-top:2px}
+
+/* CONTROLS */
+.psec{padding:12px 14px;border-bottom:1px solid var(--border)}
+.psec-title{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:9px}
+.trow{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.trow:last-child{margin-bottom:0}
+.tinfo{font-size:.78rem;color:var(--text2)}.tinfo small{display:block;font-size:.65rem;color:var(--text3)}
+.tog{position:relative;width:38px;height:21px;flex-shrink:0;cursor:pointer}
+.tog input{position:absolute;opacity:0}
+.tog-bg{position:absolute;inset:0;border-radius:11px;background:#e2e8f0;border:1px solid var(--border2);transition:all .2s}
+.tog input:checked ~ .tog-bg{background:var(--blue);border-color:var(--blue)}
+.tog-th{position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.tog input:checked ~ .tog-th{transform:translateX(17px)}
+
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{padding:3px 9px;border-radius:6px;font-size:.68rem;font-weight:600;background:var(--surface);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:all .15s;user-select:none}
+.chip:hover{border-color:var(--border2);color:var(--text)}
+.ch-all{background:#f1f5f9;border-color:var(--border2);color:var(--text);font-weight:700}
+.ch-red{background:var(--red-lt);border-color:var(--red-mid);color:var(--red);font-weight:700}
+.ch-amb{background:var(--amber-lt);border-color:#fcd34d;color:var(--amber);font-weight:700}
+.ch-grn{background:var(--green-lt);border-color:#86efac;color:var(--green-dk);font-weight:700}
+.ch-blu{background:var(--surf);border-color:#99b4f5;color:var(--blue);font-weight:700}
+
+/* LEGEND */
+.lg-row{display:flex;align-items:center;gap:8px;font-size:.74rem;color:var(--text2);margin-bottom:7px}
+.lg-row:last-child{margin-bottom:0}
+.lg-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;border:2px solid transparent}
+.lg-red{background:var(--red-lt);border-color:var(--red)}.lg-amb{background:var(--amber-lt);border-color:var(--amber)}.lg-grn{background:var(--green-lt);border-color:var(--green)}
+.lg-zone{width:18px;height:12px;border-radius:2px;flex-shrink:0;background:rgba(230,57,70,.1);border:2px dashed var(--red)}
+.lg-heat{width:22px;height:8px;border-radius:3px;flex-shrink:0;background:linear-gradient(90deg,#3b82f6,#22c55e,#fbbf24,#ef4444)}
+
+/* FEED */
+.feed-hd{padding:8px 14px 6px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+.feed-title{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2)}
+.feed-cnt{font-size:.64rem;color:var(--text3)}
+.feed-list{flex:1;overflow-y:auto}
+.feed-list::-webkit-scrollbar{width:4px}.feed-list::-webkit-scrollbar-track{background:transparent}.feed-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.fi{padding:9px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;border-left:3px solid transparent}
+.fi:hover{background:var(--surface)}
+.fi.p-Critical{border-left-color:var(--red)}.fi.p-Moderate{border-left-color:var(--amber)}.fi.p-Normal{border-left-color:var(--green)}
+.fi-top{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.fi-id{font-family:monospace;font-size:.62rem;color:var(--text3)}
+.fi-bdg{margin-left:auto;font-size:.57rem;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase}
+.b-Critical{background:var(--red-lt);color:var(--red)}.b-Moderate{background:var(--amber-lt);color:var(--amber)}.b-Normal{background:var(--green-lt);color:var(--green-dk)}
+.fi-txt{font-size:.76rem;color:var(--text);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fi-meta{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.fi-tag{font-size:.6rem;color:var(--text3);background:var(--surface);padding:1px 5px;border-radius:3px;border:1px solid var(--border)}
+.fi-img{width:100%;height:56px;object-fit:cover;border-radius:6px;margin-top:5px;border:1px solid var(--border)}
+
+/* SEARCH */
+#srch-wrap{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:450;width:310px}
+#srch{width:100%;padding:8px 14px 8px 36px;background:#fff;border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--font);font-size:.82rem;outline:none;box-shadow:var(--shadow-lg);transition:border-color .15s}
+#srch:focus{border-color:var(--accent)}
+#srch::placeholder{color:var(--text3)}
+.srch-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+
+/* ZOOM + RECENTER */
+#zoom-ctrl{position:fixed;right:16px;bottom:40px;z-index:450;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);border-radius:8px;overflow:hidden}
+.z-btn{width:34px;height:34px;background:#fff;border:1px solid var(--border);border-top:none;color:var(--text2);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s}
+.z-btn:first-child{border-top:1px solid var(--border)}.z-btn:hover{background:var(--surface)}
+#recenter{position:fixed;right:16px;bottom:112px;z-index:450;width:34px;height:34px;background:#fff;border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);transition:background .12s}
+#recenter:hover{background:var(--surface)}
+
+/* ALERT FAB */
+#alert-fab{position:fixed;right:16px;top:112px;z-index:450;background:var(--red);color:#fff;border:none;border-radius:9px;padding:7px 13px;font-family:var(--font);font-size:.78rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:none;align-items:center;gap:7px;cursor:pointer;box-shadow:0 3px 16px rgba(230,57,70,.35);animation:fabpulse 2.5s ease-in-out infinite}
+#alert-fab.show{display:flex}
+#alert-fab:hover{background:#c1121f}
+@keyframes fabpulse{0%,100%{box-shadow:0 3px 16px rgba(230,57,70,.35)}50%{box-shadow:0 3px 28px rgba(230,57,70,.55)}}
+.fab-n{background:rgba(255,255,255,.25);border-radius:5px;padding:1px 6px;font-size:.75rem}
+
+/* ALERTS PANEL */
+#alerts-panel{position:fixed;top:56px;right:0;bottom:0;width:280px;z-index:600;background:#fff;border-left:1px solid var(--border);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;transform:translateX(264px);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+#alerts-panel.open{transform:translateX(0)}
+.ap-hd{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ap-title{font-size:.88rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:6px}
+.ap-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
+.ap-close{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:1rem}
+.ap-close:hover{color:var(--text)}
+.ap-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px}
+.az-card{background:#fff5f5;border:1px solid #fecaca;border-radius:9px;padding:11px;cursor:pointer;transition:all .15s}
+.az-card:hover{background:#fee2e2;border-color:var(--red-mid)}
+.az-top{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.az-chip{font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--red);color:#fff;letter-spacing:.8px;text-transform:uppercase}
+.az-num{font-size:1.05rem;font-weight:800;color:var(--red);margin-left:auto}
+.az-area{font-size:.8rem;color:var(--text);font-weight:600;margin-bottom:2px}
+.az-cats{font-size:.66rem;color:var(--text3)}
+.ap-empty{text-align:center;padding:36px 14px;color:var(--text3);font-size:.8rem}
+
+/* LEAFLET POPUP OVERRIDE */
+.leaflet-popup-content-wrapper{background:#fff!important;border:1px solid var(--border)!important;border-radius:14px!important;box-shadow:var(--shadow-lg)!important;padding:0!important}
+.leaflet-popup-tip-container{display:none!important}
+.leaflet-popup-content{margin:0!important}
+.leaflet-popup-close-button{color:var(--text3)!important;font-size:15px!important;right:8px!important;top:8px!important}
+.leaflet-popup-close-button:hover{color:var(--text)!important}
+
+/* POPUP BODY */
+.pu{min-width:240px;max-width:280px;font-family:var(--font)}
+.pu-img{width:100%;height:130px;object-fit:cover;border-radius:14px 14px 0 0;display:block;border-bottom:1px solid var(--border)}
+.pu-body{padding:12px 14px}
+.pu-id{font-family:monospace;font-size:.62rem;color:var(--text3);margin-bottom:6px}
+.pu-text{font-size:.8rem;color:var(--text);line-height:1.5;margin-bottom:8px}
+.pu-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.pu-tag{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase}
+.pt-crit{background:var(--red-lt);color:var(--red)}.pt-mod{background:var(--amber-lt);color:var(--amber)}.pt-nor{background:var(--green-lt);color:var(--green-dk)}.pt-cat{background:var(--accent-lt);color:var(--accent)}
+.pu-note{font-size:.75rem;color:var(--text2);background:var(--surface);border-radius:7px;padding:6px 8px;margin-bottom:8px;line-height:1.4;border-left:3px solid var(--accent-mid)}
+.pu-note-lbl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:2px}
+.pu-meta{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.pu-row{font-size:.7rem;color:var(--text2);display:flex;align-items:center;gap:5px}
+.pu-actions{display:flex;gap:6px}
+/* Navigate button — opens Google Maps at exact complaint coordinates */
+.pu-nav{flex:1;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:8px;padding:7px 10px;font-size:.76rem;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;box-shadow:0 2px 8px rgba(13,148,136,.35);transition:all .15s}
+.pu-nav:hover{opacity:.9;box-shadow:0 4px 14px rgba(13,148,136,.5)}
+/* Directions button — opens Google Maps turn-by-turn */
+.pu-dir{flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:8px;padding:7px 10px;font-size:.76rem;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;box-shadow:0 2px 8px rgba(245,158,11,.35);transition:all .15s}
+.pu-dir:hover{opacity:.9;box-shadow:0 4px 14px rgba(245,158,11,.5)}
+
+@media(max-width:768px){
+  #panel{width:270px}#panel.closed{transform:translateX(-270px)}.ptab{left:270px}
+  #panel.closed ~ .ptab{left:0}
+  #srch-wrap{width:calc(100% - 32px)}
+  #alerts-panel{width:100%;top:auto;height:55vh;border-radius:14px 14px 0 0}
+}
+
+
+/* ── GPS LOCATE BUTTON ───────────────────────────────── */
+#gps-btn{
+  position:fixed;right:16px;bottom:162px;z-index:450;
+  width:34px;height:34px;background:var(--navy);
+  border:1px solid rgba(255,255,255,.2);border-radius:8px;
+  color:#fff;font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 10px rgba(11,31,75,.35);transition:all .15s;
+}
+#gps-btn:hover{background:var(--blue)}
+#gps-btn.locating{animation:gpspulse .8s ease-in-out infinite}
+@keyframes gpspulse{0%,100%{box-shadow:0 3px 10px rgba(22,85,245,.35)}50%{box-shadow:0 3px 20px rgba(22,85,245,.7)}}
+
+/* ── AREA NAV PANEL (right side) ─────────────────────── */
+#area-nav{
+  position:fixed;top:56px;right:0;bottom:0;width:230px;z-index:400;
+  background:rgba(255,255,255,.97);border-left:1px solid var(--border);
+  box-shadow:var(--shadow-lg);display:flex;flex-direction:column;
+  transform:translateX(220px);transition:transform .28s cubic-bezier(.4,0,.2,1);
+}
+#area-nav.open{transform:translateX(0)}
+.an-hd{
+  padding:10px 12px;border-bottom:1px solid var(--border);
+  background:var(--navy);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.an-title{font-size:.78rem;font-weight:700;color:#fff;letter-spacing:.5px}
+.an-close{background:transparent;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:1rem}
+.an-close:hover{color:#fff}
+.an-body{flex:1;overflow-y:auto;padding:8px}
+.an-body::-webkit-scrollbar{width:3px}
+.an-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.an-group{margin-bottom:10px}
+.an-dir{
+  font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:var(--text3);padding:4px 6px;margin-bottom:3px;
+  border-bottom:1px solid var(--border);
+}
+.an-btn{
+  display:flex;align-items:center;gap:6px;
+  width:100%;text-align:left;
+  background:transparent;border:none;
+  padding:5px 6px;border-radius:7px;cursor:pointer;
+  font-family:var(--font);font-size:.75rem;color:var(--text2);
+  transition:background .12s;
+}
+.an-btn:hover{background:var(--surf);color:var(--blue)}
+.an-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── AREA NAV TOGGLE BUTTON ──────────────────────────── */
+#area-nav-btn{
+  position:fixed;right:16px;top:64px;z-index:450;
+  background:var(--navy);color:#fff;border:none;border-radius:9px;
+  padding:7px 13px;font-family:var(--font);font-size:.76rem;font-weight:600;
+  cursor:pointer;box-shadow:0 3px 14px rgba(11,31,75,.3);
+  display:flex;align-items:center;gap:6px;transition:all .15s;
+}
+#area-nav-btn:hover{background:var(--blue)}
+
+/* ── AREA INFO TOAST ─────────────────────────────────── */
+#area-toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:600;background:#fff;border:1px solid var(--border);border-radius:14px;
+  padding:12px 16px;min-width:260px;max-width:340px;
+  box-shadow:0 8px 32px rgba(22,85,245,.2);
+  opacity:0;transition:all .25s;pointer-events:none;
+}
+#area-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── ZONE LEGEND IN PANEL ────────────────────────────── */
+.zone-legend{padding:8px 14px;border-top:1px solid var(--border);flex-shrink:0}
+.zl-title{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:6px}
+.zl-row{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--text2);margin-bottom:4px}
+.zl-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+</style>
+</head>
+<body>
+
+<div id="loader"><div class="ld-logo">Civic <span>Intel</span></div><div class="ld-bar"><div class="ld-fill"></div></div><div class="ld-sub">Loading map…</div></div>
+
+<div id="topbar">
+  <div class="brand"><div class="brand-icon">🏙</div>Civic <em>Intel</em></div>
+  <div class="live-tag"><span class="live-dot"></span>Live</div>
+  <div class="tb-right"><a href="/" class="tb-btn">← Submit</a><a href="/admin" class="tb-btn red">Admin ↗</a></div>
+</div>
+
+<div id="map"></div>
+
+<div id="srch-wrap">
+  <span class="srch-ico">🔍</span>
+  <input id="srch" type="text" placeholder="Search area, ID, category…" oninput="onSearch(this.value)">
+</div>
+
+<!-- LEFT PANEL -->
+<div id="panel">
+  <div class="stat-bar">
+    <div class="sc"><div class="sn n-r" id="sc">0</div><div class="sl">Critical</div></div>
+    <div class="sc"><div class="sn n-a" id="sm">0</div><div class="sl">Moderate</div></div>
+    <div class="sc"><div class="sn n-g" id="sn">0</div><div class="sl">Normal</div></div>
+    <div class="sc"><div class="sn n-b" id="sz">0</div><div class="sl">Zones</div></div>
+  </div>
+
+  <div class="psec">
+    <div class="psec-title">Map Layers</div>
+    <div class="trow"><div class="tinfo">Heatmap <small>Complaint density</small></div><label class="tog"><input type="checkbox" id="t-heat" checked onchange="onToggleHeat(this.checked)"><span class="tog-bg"></span><span class="tog-th"></span></label></div>
+    <div class="trow"><div class="tinfo">Alert Zones <small>Critical clusters</small></div><label class="tog"><input type="checkbox" id="t-zones" checked onchange="onToggleZones(this.checked)"><span class="tog-bg"></span><span class="tog-th"></span></label></div>
+    <div class="trow"><div class="tinfo">Fake Complaints <small>Show flagged</small></div><label class="tog"><input type="checkbox" id="t-fake" onchange="redraw()"><span class="tog-bg"></span><span class="tog-th"></span></label></div>
+    <div class="trow"><div class="tinfo">Area Labels <small>Locality names</small></div><label class="tog"><input type="checkbox" id="t-labels" checked onchange="onToggleLabels(this.checked)"><span class="tog-bg"></span><span class="tog-th"></span></label></div>
+  </div>
+
+  <div class="psec">
+    <div class="psec-title">Priority Filter</div>
+    <div class="chips" id="pri-chips">
+      <span class="chip ch-all" data-v="all" onclick="setPri('all',this)">All</span>
+      <span class="chip" data-v="Critical" onclick="setPri('Critical',this)">🔴 Critical</span>
+      <span class="chip" data-v="Moderate" onclick="setPri('Moderate',this)">🟡 Moderate</span>
+      <span class="chip" data-v="Normal" onclick="setPri('Normal',this)">🟢 Normal</span>
+    </div>
+  </div>
+
+  <div class="psec">
+    <div class="psec-title">Category Filter</div>
+    <div class="chips" id="cat-chips">
+      <span class="chip ch-all" data-v="all" onclick="setCat('all',this)">All</span>
+      <span class="chip" data-v="Road" onclick="setCat('Road',this)">🛣 Road</span>
+      <span class="chip" data-v="Water" onclick="setCat('Water',this)">💧 Water</span>
+      <span class="chip" data-v="Electricity" onclick="setCat('Electricity',this)">⚡ Elec</span>
+      <span class="chip" data-v="Sanitation" onclick="setCat('Sanitation',this)">🗑 Sanit</span>
+      <span class="chip" data-v="PublicSafety" onclick="setCat('PublicSafety',this)">🚔 Safety</span>
+    </div>
+  </div>
+
+  <div class="psec">
+    <div class="psec-title">Legend</div>
+    <div class="lg-row"><div class="lg-dot lg-red"></div>🔴 Critical — Immediate action</div>
+    <div class="lg-row"><div class="lg-dot lg-amb"></div>🟡 Moderate — Needs attention</div>
+    <div class="lg-row"><div class="lg-dot lg-grn"></div>🟢 Normal — Routine</div>
+    <div class="lg-row"><div class="lg-zone"></div>Red Alert Zone (3+ critical)</div>
+    <div class="lg-row"><div class="lg-heat"></div>Heatmap — complaint density</div>
+    <div class="lg-row"><div class="lg-dot" style="width:12px;height:12px;border-radius:3px;background:#e8f1fe;border:1.5px solid #1655f5;flex-shrink:0"></div>Area labels — locality names</div>
+  </div>
+
+  <div class="feed-hd"><span class="feed-title">Live Feed</span><span class="feed-cnt" id="feed-cnt">—</span></div>
+  <div class="feed-list" id="feed-list"></div>
+</div>
+<button class="ptab" id="ptab" onclick="togglePanel()">◀</button>
+
+<button id="area-nav-btn" onclick="document.getElementById('alerts-panel').classList.remove('open');document.getElementById('area-nav').classList.toggle('open')">🗺 Indore Areas ▾</button>
+
+<div id="zoom-ctrl"><button class="z-btn" onclick="lmap.zoomIn()">+</button><button class="z-btn" onclick="lmap.zoomOut()">−</button></div>
+<button id="recenter" title="Re-center to Indore" onclick="recenter()">⊙</button>
+<button id="gps-btn" title="Go to my GPS location" onclick="gpsLocate()">📡</button>
+
+<button id="alert-fab" onclick="openAlerts()">🔴 Alert Zones <span class="fab-n" id="fab-n">0</span></button>
+
+<div id="alerts-panel">
+  <div class="ap-hd">
+    <div class="ap-title"><span class="ap-dot"></span>Red Alert Zones</div>
+    <button class="ap-close" onclick="closeAlerts()">✕</button>
+  </div>
+  <div class="ap-body" id="ap-body"><div class="ap-empty">✅ No active alert zones</div></div>
+</div>
+
+<!-- AREA NAVIGATION PANEL -->
+<div id="area-nav">
+  <div class="an-hd">
+    <span class="an-title">📍 Indore Localities</span>
+    <button class="an-close" onclick="document.getElementById('area-nav').classList.remove('open')">✕</button>
+  </div>
+  <div class="an-body" id="area-nav-list"></div>
+  <div class="zone-legend">
+    <div class="zl-title">Zone Types</div>
+    <div class="zl-row"><div class="zl-dot" style="background:#8b5cf6"></div>Heritage</div>
+    <div class="zl-row"><div class="zl-dot" style="background:#0ea5e9"></div>Commercial</div>
+    <div class="zl-row"><div class="zl-dot" style="background:#10b981"></div>Residential</div>
+    <div class="zl-row"><div class="zl-dot" style="background:#1655f5"></div>IT Hub</div>
+    <div class="zl-row"><div class="zl-dot" style="background:#f97316"></div>Industrial</div>
+    <div class="zl-row"><div class="zl-dot" style="background:#64748b"></div>Mixed</div>
+  </div>
+</div>
+
+<!-- AREA INFO TOAST -->
+<div id="area-toast"></div>
+
+<!-- Leaflet JS + heat plugin (OpenStreetMap only — no Google Maps) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════
+   CIVIC INTEL — INDORE CITY MAP
+   Locked to Indore bounds, all major localities labelled,
+   directional compass, area quick-navigation panel
+═══════════════════════════════════════════════════════════ */
+
+/* ── INDORE CITY CONFIGURATION ─────────────────────────── */
+const INDORE = {
+  center:  [22.7196, 75.8577],  // Palasia — city centre
+  zoom:    13,
+  minZoom: 11,                  // can't zoom out beyond city
+  maxZoom: 18,
+  // Hard bounding box — user cannot pan outside Indore district
+  bounds: L.latLngBounds(
+    [22.45, 75.60],             // SW corner
+    [23.00, 76.15]              // NE corner
+  )
+};
+
+/* ── ALL MAJOR INDORE LOCALITIES (with compass direction) ── */
+const INDORE_AREAS = [
+  // CITY CENTRE
+  { name:'Rajwada',           lat:22.7196, lng:75.8472, dir:'Centre',    zone:'Heritage' },
+  { name:'Sarafa Bazaar',     lat:22.7180, lng:75.8480, dir:'Centre',    zone:'Heritage' },
+  { name:'Palasia',           lat:22.7196, lng:75.8577, dir:'Centre',    zone:'Commercial' },
+  { name:'MG Road',           lat:22.7227, lng:75.8655, dir:'Centre',    zone:'Commercial' },
+  { name:'Sapna Sangeeta',    lat:22.7196, lng:75.8600, dir:'Centre',    zone:'Commercial' },
+  // NORTH
+  { name:'Kanadiya',          lat:22.7924, lng:75.8529, dir:'North',     zone:'Residential' },
+  { name:'Lasudia Mori',      lat:22.7666, lng:75.8801, dir:'North',     zone:'Residential' },
+  { name:'Nipania',           lat:22.7550, lng:75.9200, dir:'North-East',zone:'Residential' },
+  { name:'Silicon City',      lat:22.7635, lng:75.9178, dir:'North-East',zone:'IT Hub' },
+  { name:'Super Corridor',    lat:22.8148, lng:75.8899, dir:'North',     zone:'IT Hub' },
+  { name:'Manglia',           lat:22.7893, lng:75.7884, dir:'North-West',zone:'Residential' },
+  { name:'Omaxe City',        lat:22.7800, lng:75.8550, dir:'North',     zone:'Township' },
+  // EAST
+  { name:'Vijay Nagar',       lat:22.7553, lng:75.8964, dir:'North-East',zone:'Commercial' },
+  { name:'Scheme 54',         lat:22.7402, lng:75.9038, dir:'East',      zone:'Residential' },
+  { name:'Scheme 78',         lat:22.7700, lng:75.9085, dir:'North-East',zone:'Residential' },
+  { name:'Khajrana',          lat:22.7108, lng:75.9037, dir:'East',      zone:'Mixed' },
+  { name:'Bicholi Mardana',   lat:22.7640, lng:75.9290, dir:'East',      zone:'Residential' },
+  { name:'Bangali Square',    lat:22.7218, lng:75.8658, dir:'East',      zone:'Commercial' },
+  { name:'Geeta Bhawan',      lat:22.7244, lng:75.8769, dir:'East',      zone:'Residential' },
+  // SOUTH
+  { name:'Annapurna',         lat:22.6966, lng:75.8756, dir:'South-East',zone:'Residential' },
+  { name:'Pipliyahana',       lat:22.6958, lng:75.8990, dir:'South-East',zone:'Residential' },
+  { name:'Bijalpur',          lat:22.6640, lng:75.8555, dir:'South',     zone:'Residential' },
+  { name:'Tejaji Nagar',      lat:22.6956, lng:75.8460, dir:'South',     zone:'Residential' },
+  { name:'Nanda Nagar',       lat:22.6950, lng:75.8645, dir:'South',     zone:'Residential' },
+  { name:'Sudama Nagar',      lat:22.7057, lng:75.8677, dir:'South',     zone:'Residential' },
+  // SOUTH-WEST / WEST
+  { name:'Bhawarkua',         lat:22.6865, lng:75.8579, dir:'South-West',zone:'Mixed' },
+  { name:'Rau',               lat:22.6839, lng:75.8001, dir:'South-West',zone:'Industrial' },
+  { name:'Mhow',              lat:22.5510, lng:75.7595, dir:'South',     zone:'Cantonment' },
+  // WEST
+  { name:'Navlakha',          lat:22.7349, lng:75.8700, dir:'Centre',    zone:'Commercial' },
+  { name:'Pardeshipura',      lat:22.7407, lng:75.8726, dir:'North-East',zone:'Industrial' },
+  { name:'Musakhedi',         lat:22.7345, lng:75.8537, dir:'West',      zone:'Residential' },
+  { name:'Sanyogita Ganj',    lat:22.7280, lng:75.8527, dir:'West',      zone:'Residential' },
+  { name:'Juni Indore',       lat:22.7180, lng:75.8437, dir:'West',      zone:'Heritage' },
+  { name:'Lohamandi',         lat:22.7134, lng:75.8580, dir:'West',      zone:'Industrial' },
+  { name:'New Palasia',       lat:22.7210, lng:75.8590, dir:'Centre',    zone:'Residential' },
+  { name:'Tilak Nagar',       lat:22.7283, lng:75.8838, dir:'East',      zone:'Residential' },
+  { name:'AB Road',           lat:22.7253, lng:75.8815, dir:'East',      zone:'Commercial' },
+  { name:'Mahalaxmi Nagar',   lat:22.7420, lng:75.8956, dir:'East',      zone:'Residential' },
+  { name:'Rajendra Nagar',    lat:22.7080, lng:75.9140, dir:'South-East',zone:'Residential' },
+  { name:'Manorama Ganj',     lat:22.7296, lng:75.8612, dir:'Centre',    zone:'Residential' },
+];
+
+/* Zone colour mapping */
+const ZONE_COLORS = {
+  'Heritage':'#8b5cf6', 'Commercial':'#0ea5e9', 'Residential':'#10b981',
+  'IT Hub':'#1655f5',   'Industrial':'#f97316',  'Township':'#ec4899',
+  'Mixed':'#64748b',    'Cantonment':'#dc2626'
+};
+
+const CAT_EMOJI = { Road:'🛣', Water:'💧', Electricity:'⚡', Sanitation:'🗑', PublicSafety:'🚔' };
+
+let data = [], zones = [], priF = 'all', catF = 'all', searchQ = '', panelOpen = true;
+let mGroup, hLayer, zGroup, areaGroup, areaLabels;
+
+/* ── MAP INIT — locked to Indore ─────────────────────── */
+const lmap = L.map('map', {
+  center:   INDORE.center,
+  zoom:     INDORE.zoom,
+  minZoom:  INDORE.minZoom,
+  maxZoom:  INDORE.maxZoom,
+  maxBounds: INDORE.bounds,           // hard pan limit
+  maxBoundsViscosity: 1.0,            // can't push past boundary at all
+  zoomControl: false,
+  attributionControl: true,
+});
+// High-quality OSM tile layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '© OpenStreetMap · Civic Intel — Indore City Map'
+}).addTo(lmap);
+
+mGroup    = L.layerGroup().addTo(lmap);
+zGroup    = L.layerGroup().addTo(lmap);
+areaGroup = L.layerGroup().addTo(lmap);
+
+/* ── INDORE CITY BOUNDARY (approx polygon) ───────────── */
+const INDORE_BOUNDARY = [
+  [22.95,75.70],[22.93,75.85],[22.90,76.00],[22.85,76.08],
+  [22.78,76.10],[22.72,76.05],[22.65,75.98],[22.55,75.90],
+  [22.48,75.78],[22.50,75.65],[22.55,75.60],[22.65,75.62],
+  [22.72,75.62],[22.80,75.65],[22.90,75.68],[22.95,75.70]
+];
+L.polygon(INDORE_BOUNDARY, {
+  color: '#1655f5', weight: 2.5, dashArray: '8 5',
+  fillColor: '#1655f5', fillOpacity: 0.03
+}).addTo(lmap).bindTooltip('Indore Municipal Corporation Limits', { permanent: false, direction: 'top' });
+
+/* ── DRAW AREA LABELS (locality markers) ─────────────── */
+function drawAreaLabels(visible) {
+  areaGroup.clearLayers();
+  if (!visible) return;
+  const zoom = lmap.getZoom();
+  INDORE_AREAS.forEach(area => {
+    // Show more labels at higher zoom
+    if (zoom < 12 && area.zone === 'Residential') return;
+    const col = ZONE_COLORS[area.zone] || '#64748b';
+    const icon = L.divIcon({
+      html: `<div style="
+        background:rgba(255,255,255,0.92);
+        border:1.5px solid ${col};
+        border-radius:6px;
+        padding:2px 8px;
+        font-family:'Sora',sans-serif;
+        font-size:10px;
+        font-weight:700;
+        color:${col};
+        white-space:nowrap;
+        box-shadow:0 1px 4px rgba(0,0,0,0.12);
+        cursor:pointer;
+      ">${area.name}</div>`,
+      className: '',
+      iconAnchor: [0, 10],
+    });
+    L.marker([area.lat, area.lng], { icon, zIndexOffset: -100 })
+      .addTo(areaGroup)
+      .on('click', () => {
+        lmap.flyTo([area.lat, area.lng], 15, { duration: 0.8 });
+        showAreaInfo(area);
+      });
+  });
+}
+
+/* Show area info in a toast */
+function showAreaInfo(area) {
+  const col = ZONE_COLORS[area.zone] || '#1655f5';
+  // Count complaints in this area
+  const nearby = data.filter(c => {
+    return Math.abs(c.latitude - area.lat) < 0.015 &&
+           Math.abs(c.longitude - area.lng) < 0.015;
+  });
+  const crit = nearby.filter(c => c.priority === 'Critical' && !c.is_fake).length;
+  const mod  = nearby.filter(c => c.priority === 'Moderate' && !c.is_fake).length;
+  const nor  = nearby.filter(c => c.priority === 'Normal'   && !c.is_fake).length;
+
+  const el = document.getElementById('area-toast');
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0"></div>
+      <strong style="font-size:.88rem;color:#0b1224">${area.name}</strong>
+      <span style="margin-left:auto;font-size:.68rem;background:${col}20;color:${col};padding:2px 8px;border-radius:999px;font-weight:700;border:1px solid ${col}40">${area.zone}</span>
+    </div>
+    <div style="font-size:.74rem;color:#7a93cc;margin-bottom:8px">📍 ${area.dir} Indore</div>
+    <div style="display:flex;gap:6px;font-size:.72rem">
+      <span style="background:#fff0f0;color:#e5352b;padding:2px 8px;border-radius:5px;font-weight:600">🔴 ${crit} Critical</span>
+      <span style="background:#fffbeb;color:#f59e0b;padding:2px 8px;border-radius:5px;font-weight:600">🟡 ${mod} Moderate</span>
+      <span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:5px;font-weight:600">🟢 ${nor} Normal</span>
+    </div>`;
+  el.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+/* Redraw labels on zoom */
+lmap.on('zoomend', () => {
+  if (document.getElementById('t-labels').checked) drawAreaLabels(true);
+});
+
+/* ── COMPASS ROSE ────────────────────────────────────── */
+const compassControl = L.Control.extend({
+  options: { position: 'bottomright' },
+  onAdd: () => {
+    const el = L.DomUtil.create('div');
+    el.innerHTML = `
+      <div style="
+        width:70px;height:70px;position:relative;
+        background:rgba(255,255,255,0.95);
+        border:1.5px solid #ccd8f8;border-radius:50%;
+        box-shadow:0 4px 16px rgba(22,85,245,0.15);
+        display:flex;align-items:center;justify-content:center;
+      ">
+        <svg viewBox="0 0 70 70" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+          <!-- N arrow (blue) -->
+          <polygon points="35,6 30,35 35,30 40,35" fill="#1655f5"/>
+          <!-- S arrow (grey) -->
+          <polygon points="35,64 30,35 35,40 40,35" fill="#94a3b8"/>
+          <!-- E arrow (grey) -->
+          <polygon points="64,35 35,30 40,35 35,40" fill="#94a3b8"/>
+          <!-- W arrow (grey) -->
+          <polygon points="6,35 35,30 30,35 35,40" fill="#94a3b8"/>
+          <!-- Centre dot -->
+          <circle cx="35" cy="35" r="4" fill="#1655f5"/>
+          <!-- Direction labels -->
+          <text x="35" y="4"  text-anchor="middle" font-size="8" font-weight="700" fill="#1655f5" font-family="Sora,sans-serif">N</text>
+          <text x="35" y="68" text-anchor="middle" font-size="7" font-weight="600" fill="#94a3b8" font-family="Sora,sans-serif">S</text>
+          <text x="66" y="38" text-anchor="middle" font-size="7" font-weight="600" fill="#94a3b8" font-family="Sora,sans-serif">E</text>
+          <text x="4"  y="38" text-anchor="middle" font-size="7" font-weight="600" fill="#94a3b8" font-family="Sora,sans-serif">W</text>
+        </svg>
+      </div>`;
+    return el;
+  }
+});
+lmap.addControl(new compassControl());
+
+/* ── INDORE AREA QUICK-NAV (right panel) ─────────────── */
+const directions = ['Centre','North','North-East','East','South-East','South','South-West','West','North-West'];
+document.addEventListener('DOMContentLoaded', () => {
+  const nav = document.getElementById('area-nav-list');
+  if (!nav) return;
+  directions.forEach(dir => {
+    const areas = INDORE_AREAS.filter(a => a.dir === dir);
+    if (!areas.length) return;
+    const group = document.createElement('div');
+    group.className = 'an-group';
+    group.innerHTML = `<div class="an-dir">${dirIcon(dir)} ${dir}</div>`;
+    areas.forEach(area => {
+      const btn = document.createElement('button');
+      btn.className = 'an-btn';
+      const col = ZONE_COLORS[area.zone] || '#64748b';
+      btn.innerHTML = `<span class="an-dot" style="background:${col}"></span>${area.name}`;
+      btn.title = area.zone + ' — ' + area.dir + ' Indore';
+      btn.onclick = () => {
+        lmap.flyTo([area.lat, area.lng], 15, { duration: 0.9 });
+        showAreaInfo(area);
+      };
+      group.appendChild(btn);
+    });
+    nav.appendChild(group);
+  });
+});
+
+function dirIcon(d) {
+  return {Centre:'🏙',North:'⬆','North-East':'↗',East:'➡',
+    'South-East':'↘',South:'⬇','South-West':'↙',West:'⬅','North-West':'↖'}[d]||'📍';
+}
+
+/* ── COLORED SVG MARKERS ─────────────────────────────── */
+function makeIcon(priority, isFake) {
+  if (isFake) return L.divIcon({ html: '<div style="width:18px;height:18px;border-radius:50%;background:#94a3b8;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2)"></div>', className: '', iconSize: [18, 18], iconAnchor: [9, 9] });
+  const cfg = {
+    Critical: { fill: '#e5352b', ring: '#ffb3ad', size: 34, pulse: true },
+    Moderate: { fill: '#f59e0b', ring: '#fcd34d', size: 26, pulse: false },
+    Normal:   { fill: '#10b981', ring: '#6ee7b7', size: 20, pulse: false },
+  }[priority] || { fill: '#64748b', ring: '#cbd5e1', size: 20, pulse: false };
+  const s = cfg.size, r = s/2, pad = cfg.pulse?16:8, total = s+pad, c = total/2;
+  const pulse = cfg.pulse ? `<circle cx="${r}" cy="${r}" r="${r-1}" fill="${cfg.fill}" opacity=".12"><animate attributeName="r" values="${r-1};${r+7}" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values=".15;0" dur="1.6s" repeatCount="indefinite"/></circle>` : '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total}" viewBox="0 0 ${total} ${total}"><defs><filter id="f${priority}"><feDropShadow dx="0" dy="2" stdDeviation="${cfg.pulse?4:2}" flood-color="${cfg.fill}" flood-opacity="${cfg.pulse?.5:.25}"/></filter></defs><g transform="translate(${pad/2},${pad/2})">${pulse}<circle cx="${r}" cy="${r}" r="${r-1.5}" fill="${cfg.fill}" stroke="${cfg.ring}" stroke-width="2" filter="url(#f${priority})"/><circle cx="${r}" cy="${r}" r="${r-6}" fill="rgba(255,255,255,.4)"/></g></svg>`;
+  return L.divIcon({ html: svg, className: '', iconSize: [total, total], iconAnchor: [c, c] });
+}
+
+/* ── POPUP ───────────────────────────────────────────── */
+function buildPopup(c) {
+  const dt = new Date(c.created_at).toLocaleString();
+  const pc = { Critical:'pt-crit', Moderate:'pt-mod', Normal:'pt-nor' }[c.priority]||'';
+  const navUrl = 'https://www.google.com/maps?q=' + c.latitude + ',' + c.longitude;
+  const dirUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + c.latitude + ',' + c.longitude;
+  const imgHtml  = c.image ? `<img class="pu-img" src="${c.image}" alt="photo" onerror="this.style.display='none'">` : '';
+  const noteHtml = (c.voice_note && c.voice_note.trim()) ? `<div class="pu-note"><div class="pu-note-lbl">🗒 Note</div>${c.voice_note}</div>` : '';
+  return `<div class="pu">
+    ${imgHtml}
+    <div class="pu-body">
+      <div class="pu-id">${c.complaint_id}</div>
+      <div class="pu-text">${c.text}</div>
+      <div class="pu-tags">
+        <span class="pu-tag ${pc}">${c.priority}</span>
+        <span class="pu-tag pt-cat">${CAT_EMOJI[c.category]||''} ${c.category}</span>
+        ${c.is_fake?'<span class="pu-tag pt-crit">⚠ Flagged</span>':''}
+      </div>
+      ${noteHtml}
+      <div class="pu-meta">
+        ${c.area_name?`<div class="pu-row">📍 ${c.area_name}</div>`:''}
+        <div class="pu-row">🏢 ${c.department}</div>
+        <div class="pu-row" style="color:#7a93cc">🕒 ${dt}</div>
+      </div>
+      <div class="pu-actions">
+        <a class="pu-nav" href="${navUrl}" target="_blank" rel="noopener">🗺 View Location</a>
+        <a class="pu-dir" href="${dirUrl}" target="_blank" rel="noopener">🧭 Navigate</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── RENDER MARKERS ──────────────────────────────────── */
+function renderMarkers() {
+  mGroup.clearLayers();
+  const showFake = document.getElementById('t-fake').checked;
+  data.filter(c => {
+    if (c.is_fake && !showFake) return false;
+    if (priF !== 'all' && c.priority !== priF) return false;
+    if (catF !== 'all' && c.category !== catF) return false;
+    return true;
+  }).sort((a,b) => ({Critical:3,Moderate:2,Normal:1}[a.priority]||0) - ({Critical:3,Moderate:2,Normal:1}[b.priority]||0))
+  .forEach(c => {
+    L.marker([+c.latitude, +c.longitude], { icon: makeIcon(c.priority, c.is_fake), zIndexOffset: c.priority==='Critical'?1000:0 })
+      .bindPopup(buildPopup(c), { maxWidth: 290, closeButton: true, autoPan: true })
+      .addTo(mGroup);
+  });
+}
+
+/* ── HEATMAP ─────────────────────────────────────────── */
+function renderHeat() {
+  if (hLayer) { lmap.removeLayer(hLayer); hLayer = null; }
+  const showFake = document.getElementById('t-fake').checked;
+  const pts = data.filter(c => !c.is_fake||showFake).map(c => [+c.latitude, +c.longitude, c.priority==='Critical'?1:c.priority==='Moderate'?.6:.3]);
+  if (!pts.length) return;
+  hLayer = L.heatLayer(pts, { radius:38, blur:28, maxZoom:15, max:1, gradient:{'0':'rgba(0,0,0,0)','.2':'#3b82f6','.4':'#06b6d4','.55':'#22c55e','.7':'#fbbf24','.85':'#f97316','1':'#dc2626'} });
+  if (document.getElementById('t-heat').checked) hLayer.addTo(lmap);
+}
+
+/* ── RED ALERT ZONES ─────────────────────────────────── */
+function renderZones() {
+  zGroup.clearLayers();
+  if (!document.getElementById('t-zones').checked) return;
+  zones.forEach(z => {
+    const ll = [+z.latitude, +z.longitude];
+    L.circle(ll, { radius:2200, color:'#e5352b', weight:0, fillColor:'#e5352b', fillOpacity:.04 }).addTo(zGroup);
+    L.circle(ll, { radius:1500, color:'#e5352b', weight:2.5, dashArray:'9 5', fillColor:'#e5352b', fillOpacity:.09 })
+      .bindPopup(`<div class="pu-body"><div style="color:#e5352b;font-weight:800;margin-bottom:7px">🔴 RED ALERT ZONE</div><div class="pu-text">📍 ${z.area_name||'Unknown'}</div><div class="pu-tags"><span class="pu-tag pt-crit">${z.complaint_count} Critical</span></div><div class="pu-actions" style="margin-top:8px"><a class="pu-nav" href="https://www.google.com/maps?q=${z.latitude},${z.longitude}" target="_blank">🗺 View on Maps</a></div></div>`)
+      .addTo(zGroup);
+    L.marker(ll, { icon: L.divIcon({ html:`<div style="background:#e5352b;color:#fff;font-family:'Sora',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:5px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 10px rgba(229,53,43,.4)">⚠ ALERT · ${z.complaint_count}</div>`, className:'', iconAnchor:[0,0] }), zIndexOffset:3000, interactive:false }).addTo(zGroup);
+  });
+}
+
+/* ── FEED ────────────────────────────────────────────── */
+function renderFeed() {
+  const showFake = document.getElementById('t-fake').checked, q = searchQ.toLowerCase();
+  const list = data.filter(c => {
+    if (c.is_fake && !showFake) return false;
+    if (priF!=='all' && c.priority!==priF) return false;
+    if (catF!=='all' && c.category!==catF) return false;
+    if (q) return c.text.toLowerCase().includes(q)||(c.area_name||'').toLowerCase().includes(q)||c.complaint_id.toLowerCase().includes(q);
+    return true;
+  });
+  document.getElementById('feed-cnt').textContent = list.length+' item'+(list.length!==1?'s':'');
+  const el = document.getElementById('feed-list');
+  if (!list.length) { el.innerHTML='<div style="text-align:center;padding:28px 12px;color:#7a93cc;font-size:.76rem">No results</div>'; return; }
+  el.innerHTML = list.slice(0,100).map(c=>`
+    <div class="fi p-${c.priority}" onclick="flyTo(${c.latitude},${c.longitude})">
+      <div class="fi-top"><span class="fi-id">${c.complaint_id}</span><span class="fi-bdg b-${c.priority}">${c.priority}</span></div>
+      <div class="fi-txt">${c.text}</div>
+      ${c.image?`<img class="fi-img" src="${c.image}" alt="" onerror="this.style.display='none'">`:''}
+      <div class="fi-meta">
+        <span class="fi-tag">${CAT_EMOJI[c.category]||''} ${c.category}</span>
+        ${c.area_name?`<span class="fi-tag">📍 ${c.area_name}</span>`:''}
+        ${c.voice_note?'<span class="fi-tag">🗒 Note</span>':''}
+        ${c.is_fake?'<span class="fi-tag" style="color:#e5352b">⚠ Fake</span>':''}
+      </div>
+    </div>`).join('');
+}
+
+/* ── STATS ───────────────────────────────────────────── */
+function updateStats() {
+  const g = data.filter(c => !c.is_fake);
+  document.getElementById('sc').textContent = g.filter(c=>c.priority==='Critical').length;
+  document.getElementById('sm').textContent = g.filter(c=>c.priority==='Moderate').length;
+  document.getElementById('sn').textContent = g.filter(c=>c.priority==='Normal').length;
+  document.getElementById('sz').textContent = zones.length;
+  const fab = document.getElementById('alert-fab');
+  zones.length>0 ? (fab.classList.add('show'), document.getElementById('fab-n').textContent=zones.length) : fab.classList.remove('show');
+}
+function renderAlertsPanel() {
+  const el = document.getElementById('ap-body');
+  if (!zones.length) { el.innerHTML='<div class="ap-empty">✅ No active alert zones</div>'; return; }
+  el.innerHTML = zones.map(z=>`
+  <div class="az-card" onclick="flyTo(${z.latitude},${z.longitude})">
+    <div class="az-top"><span class="az-chip">Red Alert</span><span class="az-num">${z.complaint_count}×</span></div>
+    <div class="az-area">📍 ${z.area_name||'Unknown Area'}</div>
+    <div class="az-cats">${(z.categories||[]).join(' · ')}</div>
+    <div style="display:flex;gap:5px;margin-top:8px">
+      <a href="https://www.google.com/maps?q=${z.latitude},${z.longitude}"
+        target="_blank"
+        style="flex:1;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;text-decoration:none;border-radius:6px;padding:5px 8px;font-size:.7rem;font-weight:700;text-align:center;display:block"
+        onclick="event.stopPropagation()">🗺 View</a>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${z.latitude},${z.longitude}"
+        target="_blank"
+        style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;text-decoration:none;border-radius:6px;padding:5px 8px;font-size:.7rem;font-weight:700;text-align:center;display:block"
+        onclick="event.stopPropagation()">🧭 Navigate</a>
+    </div>
+  </div>`).join('');
+}
+
+/* ── DATA LOAD ───────────────────────────────────────── */
+let firstLoad = true;
+async function loadData() {
+  try {
+    const r = await fetch('/map-data'), d = await r.json();
+    data = d.complaints||[]; zones = d.red_alert_zones||[];
+    updateStats(); redraw(); renderFeed(); renderAlertsPanel();
+    if (firstLoad) { firstLoad=false; drawAreaLabels(true); }
+  } catch(e) {}
+}
+function redraw() { renderMarkers(); renderHeat(); renderZones(); }
+
+/* ── CONTROLS ────────────────────────────────────────── */
+function flyTo(lat,lng) { lmap.flyTo([+lat,+lng], 16, { duration:1.1, easeLinearity:.3 }); }
+function recenter()     { lmap.flyTo(INDORE.center, INDORE.zoom, { duration:1 }); }
+function togglePanel()  { panelOpen=!panelOpen; document.getElementById('panel').classList.toggle('closed',!panelOpen); document.getElementById('ptab').textContent=panelOpen?'◀':'▶'; }
+function openAlerts() {
+  // Close area-nav first to avoid overlap
+  document.getElementById('area-nav').classList.remove('open');
+  document.getElementById('alerts-panel').classList.add('open');
+}
+function closeAlerts()  { document.getElementById('alerts-panel').classList.remove('open'); }
+function onToggleHeat(on)   { if(hLayer) on?hLayer.addTo(lmap):lmap.removeLayer(hLayer); }
+function onToggleZones(on)  { on?zGroup.addTo(lmap):lmap.removeLayer(zGroup); }
+function onToggleLabels(on) { drawAreaLabels(on); }
+function onSearch(v) { searchQ=v; renderFeed(); }
+function setPri(val) {
+  priF=val; document.querySelectorAll('#pri-chips .chip').forEach(c=>{c.className='chip'; if(c.dataset.v===val)c.classList.add(val==='all'?'ch-all':val==='Critical'?'ch-red':val==='Moderate'?'ch-amb':'ch-grn')});
+  renderMarkers(); renderFeed();
+}
+function setCat(val) {
+  catF=val; document.querySelectorAll('#cat-chips .chip').forEach(c=>{c.className='chip'; if(c.dataset.v===val)c.classList.add(val==='all'?'ch-all':'ch-blu')});
+  renderMarkers(); renderFeed();
+}
+
+/* ── GPS LOCATE ──────────────────────────────────────── */
+function gpsLocate() {
+  const btn = document.getElementById('gps-btn');
+  if (!navigator.geolocation) {
+    alert('GPS not supported by this browser. Use Chrome or Edge.');
+    return;
+  }
+  btn.classList.add('locating');
+  btn.title = 'Detecting…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      // Check if user is actually in Indore area (~50 km radius)
+      const dist = Math.sqrt(Math.pow(lat-22.7196,2)+Math.pow(lng-75.8577,2));
+      if (dist > 0.6) {
+        // Outside Indore — show pin at Indore with note
+        lmap.flyTo(INDORE.center, 14, {duration:1});
+        // Show a toast
+        const toast = document.getElementById('area-toast');
+        toast.innerHTML = '<div style="color:#f59e0b;font-weight:700;margin-bottom:4px">📡 You are outside Indore</div><div style="font-size:.78rem;color:#334d70">Map is locked to Indore city. Your device GPS location is outside the city boundary.</div>';
+        toast.classList.add('show');
+        clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(()=>toast.classList.remove('show'),4000);
+      } else {
+        lmap.flyTo([lat, lng], 16, {duration:1.2});
+        // Drop a temporary GPS marker
+        if (window._gpsMarker) lmap.removeLayer(window._gpsMarker);
+        window._gpsMarker = L.circleMarker([lat, lng], {
+          radius:10, color:'#1655f5', fillColor:'#1655f5',
+          fillOpacity:.3, weight:3
+        }).addTo(lmap)
+        .bindPopup('<div class="pu-body" style="min-width:160px"><b style="color:#1655f5">📡 Your Location</b><div class="pu-row" style="margin-top:6px">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</div></div>')
+        .openPopup();
+        setTimeout(()=>{ if(window._gpsMarker) lmap.removeLayer(window._gpsMarker); }, 30000);
+      }
+      btn.classList.remove('locating');
+      btn.title = 'Go to my GPS location';
+    },
+    err => {
+      btn.classList.remove('locating');
+      btn.title = 'Go to my GPS location';
+      const msg = {1:'Permission denied. Allow location in browser settings.', 2:'GPS unavailable.', 3:'GPS timed out.'}[err.code]||'GPS error.';
+      alert('📡 ' + msg);
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+/* BOOT */
+loadData();
+setInterval(loadData, 30000);
+setTimeout(() => document.getElementById('loader').classList.add('out'), 700);
+</script>
+</body>
+</html>

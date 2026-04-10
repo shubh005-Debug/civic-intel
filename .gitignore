@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Flask
+instance/
+.webassets-cache
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Environment variables
+.env
+
+# Uploads (if you store images)
+uploads/
+
+# Machine Learning models
+*.pkl
+*.h5
+*.joblib
+*.model
+
+# Checkpoints
+checkpoints/
+
+# Temporary files
+*.tmp

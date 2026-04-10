@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Civic Intel — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{
+  --navy:    #0b1f4b;
+  --blue:    #1655f5;
+  --blue2:   #4a86ff;
+  --cyan:    #00c2e0;
+  --bg:      #f4f8ff;
+  --white:   #ffffff;
+  --card:    #ffffff;
+  --surf:    #eaf0ff;
+  --border:  #ccd8f8;
+  --b2:      #99b4f5;
+  --accent:  #1655f5;
+  --accent2: #0b1f4b;
+  --accent-lt:#eaf0ff;
+  --accent-mid:#99b4f5;
+  --red:     #e5352b;
+  --red-lt:  #fff1f0;
+  --red-mid: #ffb3ad;
+  --amber:   #f59e0b;
+  --amber-lt:#fffbeb;
+  --green:   #16a34a;
+  --green-lt:#f0fdf4;
+  --green-dk:#15803d;
+  --text:    #0b1224;
+  --text2:   #2d4075;
+  --text3:   #7a93cc;
+  --shadow:  0 1px 4px rgba(22,85,245,.06),0 4px 16px rgba(22,85,245,.06);
+  --shadow-lg:0 4px 28px rgba(22,85,245,.12);
+  --radius:  12px;
+  --font:    'Sora',sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;flex-direction:column;min-height:100vh;font-size:14px}
+a{color:inherit;text-decoration:none}
+
+/* HEADER */
+header{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;background:var(--navy);border-bottom:none;box-shadow:0 2px 20px rgba(11,31,75,.45);flex-shrink:0;position:sticky;top:0;z-index:200}
+.brand{display:flex;align-items:center;gap:8px;font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:-.2px}
+.brand-sq{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;box-shadow:0 2px 8px rgba(22,85,245,.4)}
+.brand em{color:var(--cyan);font-style:normal}
+.hdr-right{display:flex;align-items:center;gap:6px;}
+.hdr-badge{background:rgba(0,194,224,.15);border:1px solid rgba(0,194,224,.3);color:var(--cyan);padding:.25rem .7rem;border-radius:6px;font-size:.72rem;font-weight:700;letter-spacing:.5px}
+.btn-sm{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);padding:.35rem .85rem;border-radius:7px;font-size:.76rem;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.btn-sm:hover{background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.35)}
+.btn-red{background:var(--red)!important;color:#fff!important;border-color:var(--red)!important}
+.btn-red:hover{background:#c0281f!important}
+.btn-acc{background:rgba(255,255,255,.18)!important;color:#fff!important;border-color:rgba(255,255,255,.3)!important}
+.btn-acc:hover{background:rgba(255,255,255,.28)!important}
+
+/* LAYOUT */
+.body-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;background:var(--navy);border-right:none;padding:1.2rem 0;flex-shrink:0;overflow-y:auto;box-shadow:inset -1px 0 0 rgba(255,255,255,.07)}
+.nav-grp{margin-bottom:1.4rem;padding:0 .9rem}
+.nav-grp-label{font-size:.59rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.35);margin-bottom:.5rem;padding:0 .5rem}
+.nav-item{display:flex;align-items:center;gap:.6rem;padding:.55rem .75rem;border-radius:9px;cursor:pointer;transition:all .15s;font-size:.82rem;color:rgba(255,255,255,.65)}
+.nav-item:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.9)}
+.nav-item.on{background:rgba(22,85,245,.4);color:#fff;font-weight:600;border-left:3px solid var(--cyan)}
+.nav-ico{font-size:.95rem;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:.58rem;padding:.1rem .45rem;border-radius:9px;font-weight:700}
+.main{flex:1;overflow-y:auto;padding:1.4rem}
+
+/* RED ALERT SECTION */
+#ra-section{background:linear-gradient(135deg,#fff0f1,#fff5f5);border:1px solid #fca5a5;border-radius:var(--radius);padding:1rem 1.4rem;margin-bottom:1.4rem;display:none}
+#ra-section.show{display:block}
+.ra-hd{display:flex;align-items:center;gap:.7rem;margin-bottom:.8rem}
+.ra-dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:blink 1s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.ra-title{font-size:1rem;font-weight:800;color:var(--red)}
+.ra-cnt{font-size:.78rem;color:var(--text2);margin-left:auto}
+.ra-zones{display:flex;gap:.6rem;flex-wrap:wrap}
+.ra-chip{background:#fff;border:1px solid var(--red-mid);border-radius:9px;padding:.5rem .9rem;font-size:.76rem}
+.ra-chip-n{font-weight:800;color:var(--red);font-size:.9rem}
+.ra-chip-a{color:var(--text2);margin-top:1px}
+.ra-chip-c{font-size:.65rem;color:var(--text3)}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.9rem;margin-bottom:1.4rem}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.2rem;box-shadow:var(--shadow)}
+.sc-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:.35rem}
+.sc-num{font-size:2rem;font-weight:800;line-height:1}
+.sc-sub{font-size:.68rem;color:var(--text3);margin-top:.2rem}
+.sc-red .sc-num{color:var(--red)}.sc-amb .sc-num{color:var(--amber)}.sc-grn .sc-num{color:var(--green)}.sc-blu .sc-num{color:var(--blue)}
+
+/* PAGE TABS */
+.page-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.4rem}
+.ptab{padding:.65rem 1.1rem;font-size:.83rem;font-weight:500;color:var(--text3);cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-1px}
+.ptab:hover{color:var(--text2)}
+.ptab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.page{display:none}.page.on{display:block}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.4rem}
+.chart-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;box-shadow:var(--shadow)}
+.chart-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:1rem}
+.chart-wrap{position:relative;height:190px}
+
+/* MAP CARD */
+.map-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:1.4rem}
+.map-card-hd{padding:.8rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.map-card-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)}
+#admin-map{ height: calc(100vh - 120px);
+    width: 100%;}
+
+/* COMPLAINT CARDS — rich card view with image, note, navigate */
+.cards-filters{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1.1rem;margin-bottom:1rem;display:flex;align-items:center;flex-wrap:wrap;gap:.7rem}
+.complaint-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem}
+.cc{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .15s,transform .15s}
+.cc:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.cc.pri-Critical{border-top:3px solid var(--red)}.cc.pri-Moderate{border-top:3px solid var(--amber)}.cc.pri-Normal{border-top:3px solid var(--green)}
+.cc-img{width:100%;height:140px;object-fit:cover;display:block;border-bottom:1px solid var(--border);cursor:zoom-in}
+.cc-body{padding:12px 14px}
+.cc-top{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.cc-id{font-family:monospace;font-size:.68rem;color:var(--text3)}
+.cc-pri{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;margin-left:auto}
+.cp-crit{background:var(--red-lt);color:var(--red)}.cp-mod{background:var(--amber-lt);color:var(--amber)}.cp-nor{background:var(--green-lt);color:var(--green-dk)}
+.cc-text{font-size:.82rem;color:var(--text);line-height:1.5;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.cc-note{font-size:.75rem;color:var(--text2);background:var(--surface);border-radius:6px;padding:6px 8px;margin-bottom:8px;border-left:3px solid var(--accent-mid);line-height:1.4}
+.cc-note-lbl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:2px}
+.cc-meta{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:10px}
+.cc-tag{font-size:.64rem;color:var(--text2);background:var(--surface);padding:2px 6px;border-radius:4px;border:1px solid var(--border)}
+.cc-actions{display:flex;gap:6px;align-items:center}
+/* Navigate to exact location */
+.cc-nav{flex:1;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:7px;padding:6px 10px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:4px;text-decoration:none;box-shadow:0 2px 8px rgba(13,148,136,.3);transition:opacity .15s}
+.cc-nav:hover{opacity:.88}
+/* Directions button */
+.cc-dir{flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:7px;padding:6px 10px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:4px;text-decoration:none;transition:all .15s}
+.cc-dir:hover{opacity:.9;box-shadow:0 4px 12px rgba(245,158,11,.4)}
+.status-sel{background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:.25rem .5rem;border-radius:5px;font-size:.72rem;font-family:var(--font);cursor:pointer;margin-left:auto}
+
+/* TABLE */
+.table-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.table-hd{padding:.9rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.7rem}
+.table-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)}
+.filters{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.fsel,.finp{background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:.38rem .7rem;border-radius:7px;font-size:.76rem;font-family:var(--font);outline:none;transition:border-color .15s}
+.fsel:focus,.finp:focus{border-color:var(--accent)}
+.finp{width:130px}.finp::placeholder{color:var(--text3)}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{padding:.65rem 1rem;text-align:left;font-size:.65rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface)}
+tbody tr{border-bottom:1px solid rgba(221,227,245,.7);transition:background .1s}
+tbody tr:hover{background:var(--surface)}
+tbody td{padding:.65rem 1rem;color:var(--text2);vertical-align:middle}
+.td-id{font-family:monospace;font-size:.72rem;color:var(--text3)}
+.td-txt{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.td-img{width:48px;height:36px;object-fit:cover;border-radius:5px;border:1px solid var(--border);cursor:zoom-in}
+.bx{padding:.18rem .5rem;border-radius:5px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.bx-red{background:var(--red-lt);color:var(--red);border:1px solid var(--red-mid)}
+.bx-amb{background:var(--amber-lt);color:var(--amber);border:1px solid #fcd34d}
+.bx-grn{background:var(--green-lt);color:var(--green-dk);border:1px solid #86efac}
+.bx-blu{background:var(--accent-lt);color:var(--accent);border:1px solid var(--accent-mid)}
+.nav-btn{background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:5px;padding:3px 8px;font-size:.7rem;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:background .15s}
+.nav-btn:hover{opacity:.9}
+.status-select{background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:.2rem .45rem;border-radius:5px;font-size:.7rem;font-family:var(--font);cursor:pointer}
+.empty-row{text-align:center;padding:2.5rem;color:var(--text3);font-size:.82rem}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1rem;border-top:1px solid var(--border)}
+.pg-info{font-size:.72rem;color:var(--text3)}
+.pg-btns{display:flex;gap:.35rem}
+.pg-btn{background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:.28rem .6rem;border-radius:5px;font-size:.72rem;cursor:pointer;transition:all .13s}
+.pg-btn:hover{background:#fff;border-color:var(--border2);color:var(--text)}
+.pg-btn:disabled{opacity:.35;pointer-events:none}
+
+/* AI ANALYZER */
+.ai-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin-bottom:1rem;box-shadow:var(--shadow)}
+.ai-title{font-size:1.05rem;font-weight:800;margin-bottom:.3rem}
+.ai-sub{font-size:.8rem;color:var(--text2);margin-bottom:1rem;line-height:1.6}
+.ai-ta{width:100%;background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:9px;padding:.75rem 1rem;font-family:var(--font);font-size:.84rem;resize:vertical;min-height:80px;outline:none;transition:border-color .15s}
+.ai-ta:focus{border-color:var(--accent)}
+.ai-result{margin-top:.9rem;padding:1rem;background:var(--surface);border-radius:9px;border:1px solid var(--border);display:none}
+.air-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-top:.65rem}
+.air-cell{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem}
+.air-lbl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3)}
+.air-val{font-size:.9rem;font-weight:700;margin-top:.2rem}
+.v-r{color:var(--red)}.v-a{color:var(--amber)}.v-g{color:var(--green-dk)}
+
+/* IMAGE LIGHTBOX */
+#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:none;align-items:center;justify-content:center;cursor:pointer}
+#lightbox.show{display:flex}
+#lb-img{max-width:90vw;max-height:85vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5);cursor:default}
+#lb-close{position:absolute;top:16px;right:20px;color:#fff;font-size:1.8rem;cursor:pointer;background:rgba(0,0,0,.4);border:none;border-radius:8px;padding:2px 10px;font-family:var(--font)}
+
+/* LEAFLET POPUP */
+.leaflet-popup-content-wrapper{background:#fff!important;border:1px solid var(--border)!important;border-radius:12px!important;box-shadow:var(--shadow-lg)!important;padding:0!important}
+.leaflet-popup-tip-container{display:none!important}
+.leaflet-popup-content{margin:0!important}
+.pu{padding:12px 14px;min-width:200px;font-family:var(--font);font-size:.78rem;color:var(--text2)}
+.pu b{color:var(--text);display:block;margin-bottom:4px;font-size:.82rem}
+
+@media(max-width:1100px){.stats-grid{grid-template-columns:repeat(3,1fr)}.charts-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.sidebar{display:none}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><div class="brand-sq">🏙</div>Civic&nbsp;<em>Intel</em></div>
+  <div class="hdr-right">
+    <span class="hdr-badge">🔒 Admin</span>
+    <button class="btn-sm" id="refresh-btn" onclick="refreshAll()">↻ Refresh</button>
+    <a href="/" class="btn-sm">← Portal</a>
+    <a href="/admin/logout" class="btn-sm btn-red">Sign Out</a>
+  </div>
+</header>
+
+<div class="body-wrap">
+  <nav class="sidebar">
+    <div class="nav-grp">
+      <div class="nav-grp-label">Dashboard</div>
+      <div class="nav-item on"  onclick="showPage('overview',this)"><span class="nav-ico">📊</span>Overview</div>
+      <div class="nav-item"     onclick="showPage('map',this)"><span class="nav-ico">🗺</span>Live Map</div>
+      <div class="nav-item"     onclick="showPage('cards',this)"><span class="nav-ico">🃏</span>Complaint Cards</div>
+      <div class="nav-item"     onclick="showPage('complaints',this)"><span class="nav-ico">📋</span>Table View</div>
+    </div>
+    <div class="nav-grp">
+      <div class="nav-grp-label">Intelligence</div>
+      <div class="nav-item"     onclick="showPage('alerts',this)"><span class="nav-ico">🔴</span>Alert Zones <span class="nav-badge" id="zone-badge">0</span></div>
+      <div class="nav-item"     onclick="showPage('ai',this)"><span class="nav-ico">🧠</span>AI Analyzer</div>
+    </div>
+    <div class="nav-grp">
+      <div class="nav-grp-label">Tools</div>
+      <div class="nav-item"     onclick="seedDemo()"><span class="nav-ico">🌱</span>Seed Demo Data</div>
+      <div class="nav-item"     onclick="clearAllData()" style="color:rgba(255,120,120,.8)"><span class="nav-ico">🗑</span>Clear All Data</div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div id="page-overview" class="page on">
+      <div id="ra-section">
+        <div class="ra-hd"><span class="ra-dot"></span><span class="ra-title">🔴 Active Red Alert Zones</span><span class="ra-cnt" id="ra-cnt"></span></div>
+        <div class="ra-zones" id="ra-zones"></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="sc-label">Total</div><div class="sc-num" id="s-total">—</div><div class="sc-sub">All complaints</div></div>
+        <div class="stat-card sc-grn"><div class="sc-label">Genuine</div><div class="sc-num" id="s-genuine">—</div><div class="sc-sub">Verified</div></div>
+        <div class="stat-card sc-red"><div class="sc-label">Critical</div><div class="sc-num" id="s-critical">—</div><div class="sc-sub">Immediate</div></div>
+        <div class="stat-card sc-amb"><div class="sc-label">Open</div><div class="sc-num" id="s-open">—</div><div class="sc-sub">Pending</div></div>
+        <div class="stat-card sc-blu"><div class="sc-label">Fake</div><div class="sc-num" id="s-fake">—</div><div class="sc-sub">AI-flagged</div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card"><div class="chart-title">By Category</div><div class="chart-wrap"><canvas id="cat-chart"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">By Priority</div><div class="chart-wrap"><canvas id="pri-chart"></canvas></div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-hd"><span class="table-title">Recent Complaints</span><button class="btn-sm btn-acc" onclick="showPage('cards',document.querySelectorAll('.nav-item')[2])">View Cards →</button></div>
+        <div style="overflow-x:auto">
+          <table><thead><tr><th>ID</th><th>Text</th><th>Photo</th><th>Category</th><th>Priority</th><th>Date</th><th>Navigate</th></tr></thead>
+          <tbody id="recent-tbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div id="page-map" class="page">
+      <div class="map-card">
+        <div class="map-card-hd"><span class="map-card-title">🗺 Live Map — Heatmap + Markers + Alert Zones</span><span style="font-size:.72rem;color:var(--text3)" id="map-ts">Not loaded</span></div>
+        <div id="admin-map"></div>
+      </div>
+    </div>
+
+    <!-- COMPLAINT CARDS (rich view with images, notes, navigate) -->
+    <div id="page-cards" class="page">
+      <div class="cards-filters">
+        <span class="table-title">Complaint Cards</span>
+        <div class="filters">
+          <input class="finp" id="cf-area" placeholder="Search area…" oninput="loadCards()">
+          <select class="fsel" id="cf-cat" onchange="loadCards()"><option value="">All Categories</option><option>Road</option><option>Water</option><option>Electricity</option><option>Sanitation</option><option>PublicSafety</option></select>
+          <select class="fsel" id="cf-pri" onchange="loadCards()"><option value="">All Priorities</option><option>Critical</option><option>Moderate</option><option>Normal</option></select>
+        </div>
+      </div>
+      <div class="complaint-cards" id="cards-grid"></div>
+    </div>
+
+    <!-- TABLE VIEW -->
+    <div id="page-complaints" class="page">
+      <div class="table-card">
+        <div class="table-hd">
+          <span class="table-title">All Complaints</span>
+          <div class="filters">
+            <input class="finp" id="f-area" placeholder="Search area…" oninput="loadComplaints()">
+            <select class="fsel" id="f-cat" onchange="loadComplaints()"><option value="">All Categories</option><option>Road</option><option>Water</option><option>Electricity</option><option>Sanitation</option><option>PublicSafety</option></select>
+            <select class="fsel" id="f-pri" onchange="loadComplaints()"><option value="">All Priorities</option><option>Critical</option><option>Moderate</option><option>Normal</option></select>
+            <select class="fsel" id="f-status" onchange="loadComplaints()"><option value="">All Status</option><option>Open</option><option>InProgress</option><option>Resolved</option></select>
+            <select class="fsel" id="f-fake" onchange="loadComplaints()"><option value="">All</option><option value="0">Genuine</option><option value="1">Fake</option></select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>ID</th><th>Text</th><th>Photo</th><th>Note</th><th>Area</th><th>Category</th><th>Priority</th><th>Validity</th><th>Dept</th><th>Status</th><th>Date</th><th>Navigate</th></tr></thead>
+            <tbody id="comp-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span class="pg-info" id="pg-info">—</span><div class="pg-btns"><button class="pg-btn" id="pg-prev" onclick="changePage(-1)" disabled>← Prev</button><button class="pg-btn" id="pg-next" onclick="changePage(1)">Next →</button></div></div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div id="page-alerts" class="page"><div id="alerts-detail"><p style="color:var(--text3);padding:2rem;font-size:.82rem">Loading…</p></div></div>
+
+    <!-- AI ANALYZER -->
+    <div id="page-ai" class="page">
+      <div class="ai-card">
+        <div class="ai-title">🧠 AI Complaint Analyzer</div>
+        <div class="ai-sub">Paste any complaint text to see AI classification, priority, fake detection and department routing.</div>
+        <textarea class="ai-ta" id="ai-txt" placeholder="Enter complaint text…"></textarea>
+        <button class="btn-sm btn-red" onclick="runAI()" style="margin-top:.7rem;padding:.48rem 1.1rem">Analyze →</button>
+        <div class="ai-result" id="ai-res">
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:var(--text3)">AI Result</div>
+          <div class="air-grid">
+            <div class="air-cell"><div class="air-lbl">Category</div><div class="air-val" id="ai-cat">—</div></div>
+            <div class="air-cell"><div class="air-lbl">Priority</div><div class="air-val" id="ai-pri">—</div></div>
+            <div class="air-cell"><div class="air-lbl">Validity</div><div class="air-val" id="ai-fake">—</div></div>
+            <div class="air-cell"><div class="air-lbl">Department</div><div class="air-val" id="ai-dept" style="font-size:.76rem">—</div></div>
+            <div class="air-cell"><div class="air-lbl">Cat Confidence</div><div class="air-val" id="ai-cc">—</div></div>
+            <div class="air-cell"><div class="air-lbl">Pri Confidence</div><div class="air-val" id="ai-pc">—</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- IMAGE LIGHTBOX -->
+<div id="lightbox" onclick="closeLB()">
+  <button id="lb-close" onclick="closeLB()">✕</button>
+  <img id="lb-img" src="" alt="">
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const CAT = { Road:'🛣', Water:'💧', Electricity:'⚡', Sanitation:'🗑', PublicSafety:'🚔' };
+let filtComps = [], curPage = 1, perPage = 15;
+let catChart, priChart, adminMap, mGroup, hLayer, zGroup;
+let mapInited = false;
+
+/* NAV */
+// function showPage(name, el) {
+//   document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+//   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
+//   document.getElementById('page-' + name).classList.add('on');
+//   if (el) el.classList.add('on');
+//   if (name === 'map' && !mapInited) { setTimeout(initAdminMap, 80); mapInited = true; }
+//   if (name === 'cards') loadCards();
+// }
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
+  document.getElementById('page-' + name).classList.add('on');
+  if (el) el.classList.add('on');
+
+  // Map initialization (first time only)
+  if (name === 'map' && !mapInited) {
+    setTimeout(initAdminMap, 80);
+    mapInited = true;
+  }
+
+  // ✅ FIX: force map resize when tab opens
+  if (name === 'map') {
+    setTimeout(() => {
+      if (adminMap) {
+        adminMap.invalidateSize();
+      }
+    }, 200);
+  }
+
+  if (name === 'cards') loadCards();
+}
+/* CHARTS */
+Chart.defaults.font.family = "'Plus Jakarta Sans',sans-serif"; Chart.defaults.color = '#8a9bc0';
+function initCharts() {
+  catChart = new Chart(document.getElementById('cat-chart').getContext('2d'), { type: 'doughnut', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#e63946','#10b981','#f59e0b','#4361ee','#6366f1'], borderWidth: 2, borderColor: '#fff', hoverOffset: 5 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } } });
+  priChart = new Chart(document.getElementById('pri-chart').getContext('2d'), { type: 'bar', data: { labels: ['Critical','Moderate','Normal'], datasets: [{ data: [0,0,0], backgroundColor: ['rgba(230,57,70,.75)','rgba(245,158,11,.75)','rgba(16,185,129,.75)'], borderRadius: 7, borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(221,227,245,.7)' }, ticks: { stepSize: 1 } } } } });
+}
+
+/* ADMIN MAP — Leaflet + OSM */
+function initAdminMap() {
+  adminMap = L.map('admin-map', { zoomControl: false }).setView([22.7196, 75.8577], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(adminMap);
+  mGroup = L.layerGroup().addTo(adminMap);
+  zGroup = L.layerGroup().addTo(adminMap);
+  refreshMap();
+}
+
+function refreshMap() {
+  if (!adminMap) return;
+  fetch('/map-data').then(r => r.json()).then(d => {
+    if (mGroup) mGroup.clearLayers(); if (zGroup) zGroup.clearLayers();
+    if (hLayer) { adminMap.removeLayer(hLayer); hLayer = null; }
+    const comps = d.complaints || [], zones = d.red_alert_zones || [];
+    comps.filter(c => !c.is_fake).forEach(c => {
+      const col = { Critical: '#e63946', Moderate: '#f59e0b', Normal: '#10b981' }[c.priority] || '#64748b';
+      const sz = c.priority === 'Critical' ? 13 : c.priority === 'Moderate' ? 9 : 7;
+      const navUrl = 'https://www.google.com/maps?q=' + c.latitude + ',' + c.longitude;
+      const dirUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + c.latitude + ',' + c.longitude;
+      const imgHtml = c.image ? `<img src="${c.image}" style="width:100%;height:80px;object-fit:cover;border-radius:6px;margin-bottom:6px;border:1px solid #dde3f5" onerror="this.style.display='none'">` : '';
+      const noteHtml = c.voice_note ? `<div style="font-size:.72rem;background:#eef1fb;border-radius:5px;padding:5px 7px;margin-bottom:6px;border-left:3px solid #b4bcf5;color:#3d4f6e">🗒 ${c.voice_note}</div>` : '';
+      const popup = `<div style="min-width:220px;max-width:260px;font-family:'Plus Jakarta Sans',sans-serif">${imgHtml}<b style="color:#0d1b2a;font-size:.82rem">${c.priority} — ${c.category}</b><p style="font-size:.76rem;color:#3d4f6e;margin:4px 0 5px;line-height:1.4">${c.text}</p>${noteHtml}<div style="font-size:.7rem;color:#8a9bc0;margin-bottom:8px">${c.area_name || ''} · ${c.department}</div><div style="display:flex;gap:5px"><a href="${navUrl}" target="_blank" style="flex:1;background:#e63946;color:#fff;text-decoration:none;border-radius:6px;padding:5px 8px;font-size:.72rem;font-weight:700;text-align:center">🗺 View</a><a href="${dirUrl}" target="_blank" style="flex:1;background:#eef0ff;color:#4361ee;text-decoration:none;border-radius:6px;padding:5px 8px;font-size:.72rem;font-weight:700;text-align:center;border:1px solid #b4bcf5">🧭 Navigate</a></div></div>`;
+      L.marker([c.latitude, c.longitude], { icon: L.divIcon({ html: `<div style="width:${sz*2}px;height:${sz*2}px;border-radius:50%;background:${col};border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.25)${c.priority==='Critical'?',0 0 0 3px rgba(230,57,70,.25)':''}"></div>`, className: '', iconSize: [sz*2,sz*2], iconAnchor: [sz,sz] }), zIndexOffset: c.priority === 'Critical' ? 500 : 0 }).bindPopup(popup, { maxWidth: 270 }).addTo(mGroup);
+    });
+    const pts = comps.filter(c => !c.is_fake).map(c => [+c.latitude, +c.longitude, c.priority === 'Critical' ? 1 : c.priority === 'Moderate' ? .6 : .3]);
+    if (pts.length) hLayer = L.heatLayer(pts, { radius: 38, blur: 28, gradient: { '0': 'rgba(0,0,0,0)', '.2': '#3b82f6', '.5': '#22c55e', '.8': '#fbbf24', '1': '#e63946' } }).addTo(adminMap);
+    zones.forEach(z => {
+      L.circle([+z.latitude, +z.longitude], { radius: 1500, color: '#e63946', weight: 2.5, dashArray: '8 5', fillColor: '#e63946', fillOpacity: .09 })
+        .bindPopup(`<div class="pu"><b style="color:#e63946">🔴 RED ALERT ZONE</b>${z.complaint_count} critical · ${z.area_name || ''}<br><a href="https://www.google.com/maps?q=${z.latitude},${z.longitude}" target="_blank" style="color:#e63946">🗺 View on Maps</a></div>`).addTo(zGroup);
+      L.marker([+z.latitude, +z.longitude], { icon: L.divIcon({ html: `<div style="background:#e63946;color:#fff;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap;box-shadow:0 2px 8px rgba(220,38,38,.4)">⚠ ${z.complaint_count} critical</div>`, className: '', iconAnchor: [0, 0] }), zIndexOffset: 2000, interactive: false }).addTo(zGroup);
+    });
+    const valid = comps.filter(c => !c.is_fake);
+    if (valid.length > 1) adminMap.fitBounds(L.latLngBounds(valid.map(c => [+c.latitude, +c.longitude])), { padding: [30, 30], maxZoom: 14 });
+    document.getElementById('map-ts').textContent = 'Refreshed ' + new Date().toLocaleTimeString();
+  }).catch(() => {});
+}
+
+/* STATS */
+async function loadStats() {
+  const r = await fetch('/admin/stats'), d = await r.json();
+  ['total','genuine','critical','open','fake'].forEach(k => document.getElementById('s-' + k).textContent = d[k] || d[k === 'total' ? 'total' : k]);
+  document.getElementById('s-total').textContent = d.total;
+  document.getElementById('s-genuine').textContent = d.genuine;
+  document.getElementById('s-critical').textContent = d.critical;
+  document.getElementById('s-open').textContent = d.open;
+  document.getElementById('s-fake').textContent = d.fake;
+  document.getElementById('zone-badge').textContent = d.red_alert_zones;
+  if (catChart) { catChart.data.labels = d.by_category.map(c => c.category); catChart.data.datasets[0].data = d.by_category.map(c => c.cnt); catChart.update(); }
+  if (priChart) { const m = { Critical: 0, Moderate: 0, Normal: 0 }; d.by_priority.forEach(p => m[p.priority] = p.cnt); priChart.data.datasets[0].data = [m.Critical, m.Moderate, m.Normal]; priChart.update(); }
+  document.getElementById('recent-tbody').innerHTML = (d.recent || []).map(c => recentRow(c)).join('');
+  if (d.red_alert_zones > 0) loadAlerts();
+}
+
+function recentRow(c) {
+  const navUrl = 'https://www.google.com/maps?q=' + c.latitude + ',' + c.longitude;
+  const imgCell = c.image ? `<img class="td-img" src="${c.image}" onclick="openLB('${c.image}')" onerror="this.style.display='none'">` : '—';
+  return `<tr><td class="td-id">${c.complaint_id}</td><td class="td-txt" title="${c.text}">${c.text}</td><td>${imgCell}</td><td><span class="bx bx-blu">${c.category}</span></td><td><span class="bx ${c.priority==='Critical'?'bx-red':c.priority==='Moderate'?'bx-amb':'bx-grn'}">${c.priority}</span></td><td style="font-size:.72rem;color:var(--text3)">${new Date(c.created_at).toLocaleDateString()}</td><td><button class="nav-btn" onclick="window.open('${navUrl}','_blank')">🗺 Navigate</button></td></tr>`;
+}
+
+/* COMPLAINT CARDS VIEW */
+async function loadCards() {
+  const p = new URLSearchParams();
+  const area = document.getElementById('cf-area').value, cat = document.getElementById('cf-cat').value, pri = document.getElementById('cf-pri').value;
+  if (area) p.set('area', area); if (cat) p.set('category', cat); if (pri) p.set('priority', pri);
+  const r = await fetch('/admin/complaints?' + p), d = await r.json();
+  const comps = d.complaints || [], grid = document.getElementById('cards-grid');
+  if (!comps.length) { grid.innerHTML = '<p style="color:var(--text3)">No complaints found</p>'; return; }
+  grid.innerHTML = comps.map(c => {
+    const navUrl = 'https://www.google.com/maps?q=' + c.latitude + ',' + c.longitude;
+    const dirUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + c.latitude + ',' + c.longitude;
+    const pc = c.priority === 'Critical' ? 'cp-crit' : c.priority === 'Moderate' ? 'cp-mod' : 'cp-nor';
+    const imgHtml = c.image ? `<img class="cc-img" src="${c.image}" alt="photo" onclick="openLB('${c.image}')" onerror="this.style.display='none'">` : '';
+    const noteHtml = c.voice_note ? `<div class="cc-note"><div class="cc-note-lbl">🗒 Voice / Text Note</div>${c.voice_note}</div>` : '';
+    return `<div class="cc pri-${c.priority}">
+      ${imgHtml}
+      <div class="cc-body">
+        <div class="cc-top"><span class="cc-id">${c.complaint_id}</span><span class="cc-pri ${pc}">${c.priority}</span></div>
+        <div class="cc-text">${c.text}</div>
+        ${noteHtml}
+        <div class="cc-meta">
+          <span class="cc-tag">${CAT[c.category] || ''} ${c.category}</span>
+          ${c.area_name ? `<span class="cc-tag">📍 ${c.area_name}</span>` : ''}
+          <span class="cc-tag">${c.status}</span>
+          <span class="cc-tag">${c.is_fake ? '⚠ Fake' : '✓ Genuine'}</span>
+          <span class="cc-tag">🕒 ${new Date(c.created_at).toLocaleDateString()}</span>
+        </div>
+        <div class="cc-actions">
+          <a class="cc-nav" href="${navUrl}" target="_blank" rel="noopener">🗺 View Location</a>
+          <a class="cc-dir" href="${dirUrl}" target="_blank" rel="noopener">🧭 Navigate</a>
+          <select class="status-sel" onchange="updateStatus('${c.complaint_id}',this.value)">
+            <option ${c.status==='Open'?'selected':''}>Open</option>
+            <option ${c.status==='InProgress'?'selected':''}>InProgress</option>
+            <option ${c.status==='Resolved'?'selected':''}>Resolved</option>
+          </select>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* TABLE VIEW */
+async function loadComplaints() {
+  const p = new URLSearchParams();
+  const area=document.getElementById('f-area').value, cat=document.getElementById('f-cat').value, pri=document.getElementById('f-pri').value, status=document.getElementById('f-status').value, fake=document.getElementById('f-fake').value;
+  if (area) p.set('area', area); if (cat) p.set('category', cat); if (pri) p.set('priority', pri); if (status) p.set('status', status); if (fake !== '') p.set('is_fake', fake);
+  const r = await fetch('/admin/complaints?' + p), d = await r.json();
+  filtComps = d.complaints || []; curPage = 1; renderTable();
+}
+
+function renderTable() {
+  const start = (curPage - 1) * perPage, end = start + perPage, slice = filtComps.slice(start, end);
+  document.getElementById('comp-tbody').innerHTML = slice.length ? slice.map(c => {
+    const navUrl = 'https://www.google.com/maps?q=' + c.latitude + ',' + c.longitude;
+    const imgCell = c.image ? `<img class="td-img" src="${c.image}" onclick="openLB('${c.image}')" onerror="this.style.display='none'">` : '—';
+    const noteCell = c.voice_note ? `<span title="${c.voice_note}" style="cursor:help;color:var(--accent)">🗒 Note</span>` : '—';
+    return `<tr><td class="td-id">${c.complaint_id}</td><td class="td-txt" title="${c.text}">${c.text}</td><td>${imgCell}</td><td>${noteCell}</td><td style="font-size:.72rem;color:var(--text2)">${c.area_name||'—'}</td><td><span class="bx bx-blu">${c.category}</span></td><td><span class="bx ${c.priority==='Critical'?'bx-red':c.priority==='Moderate'?'bx-amb':'bx-grn'}">${c.priority}</span></td><td><span class="bx ${c.is_fake?'bx-red':'bx-grn'}">${c.is_fake?'Fake':'Genuine'}</span></td><td style="font-size:.7rem;color:var(--text2)">${c.department}</td><td><select class="status-select" onchange="updateStatus('${c.complaint_id}',this.value)"><option ${c.status==='Open'?'selected':''}>Open</option><option ${c.status==='InProgress'?'selected':''}>InProgress</option><option ${c.status==='Resolved'?'selected':''}>Resolved</option></select></td><td style="font-size:.7rem;color:var(--text3)">${new Date(c.created_at).toLocaleDateString()}</td><td><button class="nav-btn" onclick="window.open('${navUrl}','_blank')">🗺 Navigate</button></td></tr>`;
+  }).join('') : '<tr><td colspan="12" class="empty-row">No complaints found</td></tr>';
+  document.getElementById('pg-info').textContent = 'Showing ' + Math.min(end, filtComps.length) + ' of ' + filtComps.length;
+  document.getElementById('pg-prev').disabled = curPage === 1;
+  document.getElementById('pg-next').disabled = end >= filtComps.length;
+}
+function changePage(d) { curPage += d; renderTable(); }
+async function updateStatus(id, status) { await fetch('/admin/update-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ complaint_id: id, status }) }); }
+
+/* ALERTS */
+async function loadAlerts() {
+  const r = await fetch('/red-alert'), d = await r.json();
+  const zones = d.red_alert_zones || [];
+  if (zones.length > 0) {
+    document.getElementById('ra-section').classList.add('show');
+    document.getElementById('ra-cnt').textContent = zones.length + ' zone(s)';
+    document.getElementById('ra-zones').innerHTML = zones.map(z => `<div class="ra-chip"><div class="ra-chip-n">${z.complaint_count}×</div><div class="ra-chip-a">📍 ${z.area_name||'Unknown'}</div><div class="ra-chip-c">${(z.categories||[]).join(' · ')}</div></div>`).join('');
+  }
+  const det = document.getElementById('alerts-detail');
+  det.innerHTML = !zones.length ? '<div style="text-align:center;padding:3rem;color:var(--text3)">✅ No active red alert zones</div>' :
+    zones.map(z => { const navUrl = 'https://www.google.com/maps?q=' + z.latitude + ',' + z.longitude; return `<div style="background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:1.2rem;margin-bottom:1rem"><div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem"><span style="width:10px;height:10px;border-radius:50%;background:#e63946;animation:blink 1s infinite;display:inline-block"></span><span style="font-size:1rem;font-weight:800;color:#e63946">🔴 RED ALERT ZONE</span></div><div style="font-size:.85rem;color:var(--text2);margin-bottom:.3rem">📍 ${z.area_name||'Unknown'}</div><div style="font-size:.82rem;color:var(--text)"><strong>${z.complaint_count}</strong> critical complaints</div><div style="font-size:.75rem;color:var(--text3);margin:.3rem 0">Categories: ${(z.categories||[]).join(', ')}</div><a href="${navUrl}" target="_blank" style="display:inline-block;background:#e63946;color:#fff;text-decoration:none;border-radius:7px;padding:6px 14px;font-size:.76rem;font-weight:700;margin-top:.5rem">🗺 Navigate on Maps</a></div>`; }).join('');
+}
+
+/* AI ANALYZER */
+async function runAI() {
+  const text = document.getElementById('ai-txt').value.trim(); if (!text) return;
+  const r = await fetch('/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+  const d = await r.json(); if (d.error) { alert(d.error); return; }
+  document.getElementById('ai-cat').textContent = d.category;
+  document.getElementById('ai-pri').textContent = d.priority; document.getElementById('ai-pri').className = 'air-val ' + (d.priority === 'Critical' ? 'v-r' : d.priority === 'Moderate' ? 'v-a' : 'v-g');
+  document.getElementById('ai-fake').textContent = d.is_fake ? '⚠ Fake' : '✓ Genuine'; document.getElementById('ai-fake').className = 'air-val ' + (d.is_fake ? 'v-r' : 'v-g');
+  document.getElementById('ai-dept').textContent = d.department;
+  document.getElementById('ai-cc').textContent = d.category_confidence + '%';
+  document.getElementById('ai-pc').textContent = d.priority_confidence + '%';
+  document.getElementById('ai-res').style.display = 'block';
+}
+
+/* SEED DEMO */
+async function clearAllData() {
+  if (!confirm('⚠ DELETE ALL complaints from database?\n\nThis cannot be undone. Are you sure?')) return;
+  try {
+    const r = await fetch('/admin/clear-data', { method: 'POST' });
+    const d = await r.json();
+    if (d.success) {
+      alert('✅ All ' + d.deleted + ' complaints deleted. Database is clean.');
+      refreshAll();
+    } else {
+      alert('Error: ' + (d.error || 'Unknown error'));
+    }
+  } catch(e) {
+    alert('Network error. Make sure Flask is running.');
+  }
+}
+
+async function seedDemo() {
+  if (!confirm('Add 16 demo complaints to test the system?')) return;
+  const r = await fetch('/admin/seed-demo', { method: 'POST' }), d = await r.json();
+  alert('✅ Added ' + d.added + ' demo complaints. Refreshing…'); refreshAll();
+}
+
+/* IMAGE LIGHTBOX */
+function openLB(src) { document.getElementById('lb-img').src = src; document.getElementById('lightbox').classList.add('show'); }
+function closeLB()     { document.getElementById('lightbox').classList.remove('show'); }
+document.getElementById('lightbox').addEventListener('click', function (e) { if (e.target === this) closeLB(); });
+
+/* REFRESH ALL */
+async function refreshAll() {
+  document.getElementById('refresh-btn').textContent = '↻ Loading…';
+  await Promise.all([loadStats(), loadComplaints()]);
+  if (mapInited) refreshMap();
+  document.getElementById('refresh-btn').textContent = '↻ Refresh';
+}
+
+initCharts();
+refreshAll();
+</script>
+</body>
+</html>

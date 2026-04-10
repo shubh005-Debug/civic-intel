@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Civic Intel — Report a Complaint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{
+  --navy:    #0b1f4b;
+  --blue:    #1655f5;
+  --blue2:   #4a86ff;
+  --cyan:    #00c2e0;
+  --bg:      #f4f8ff;
+  --white:   #ffffff;
+  --card:    #ffffff;
+  --surf:    #eaf0ff;
+  --border:  #ccd8f8;
+  --b2:      #99b4f5;
+  --red:     #e5352b;
+  --red-lt:  #fff1f0;
+  --red-mid: #ffb3ad;
+  --amber:   #f59e0b;
+  --amberlt: #fffbeb;
+  --green:   #16a34a;
+  --greenlt: #f0fdf4;
+  --greendk: #15803d;
+  --text:    #0b1224;
+  --t2:      #2d4075;
+  --t3:      #7a93cc;
+  --sh:      0 2px 16px rgba(22,85,245,.08),0 1px 4px rgba(0,0,0,.04);
+  --shlg:    0 8px 40px rgba(22,85,245,.14);
+  --shxl:    0 24px 64px rgba(22,85,245,.2);
+  --r:       14px;
+  --font:    'Sora',sans-serif;
+  --mono:    'JetBrains Mono',monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+
+/* ═══════ NAVBAR ═══════════════════════════════════════ */
+.navbar{
+  position:fixed;top:0;left:0;right:0;z-index:500;height:60px;
+  background:var(--navy);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2rem;
+  box-shadow:0 2px 24px rgba(11,31,75,.45);
+}
+.nb-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nb-mark{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--blue),var(--cyan));
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  box-shadow:0 3px 10px rgba(22,85,245,.5);
+}
+.nb-name{font-size:1.15rem;font-weight:700;color:#fff;letter-spacing:-.2px}
+.nb-name span{color:var(--cyan)}
+.nb-center{display:flex;align-items:center;gap:4px}
+.nb-center a{
+  padding:7px 16px;border-radius:7px;font-size:.86rem;font-weight:500;
+  color:rgba(255,255,255,.7);text-decoration:none;transition:all .15s;
+}
+.nb-center a:hover{background:rgba(255,255,255,.1);color:#fff}
+.nb-center a.on{color:#fff;font-weight:600}
+.nb-right{display:flex;align-items:center;gap:8px}
+.nb-pill{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(0,194,224,.15);border:1px solid rgba(0,194,224,.3);
+  color:var(--cyan);padding:4px 11px;border-radius:999px;
+  font-size:.67rem;font-weight:600;letter-spacing:.7px;text-transform:uppercase;
+}
+.nb-pill-dot{width:5px;height:5px;border-radius:50%;background:var(--cyan);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.nb-admin{
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
+  color:#fff;padding:6px 16px;border-radius:8px;font-size:.78rem;font-weight:600;
+  text-decoration:none;transition:all .15s;
+}
+.nb-admin:hover{background:var(--blue);border-color:var(--blue)}
+
+/* ═══════ HERO ══════════════════════════════════════════ */
+.hero{
+  margin-top:60px;
+  background:linear-gradient(160deg, var(--navy) 0%, #0d2a6b 55%, #0a1d50 100%);
+  min-height:320px;padding:4rem 2rem 5rem;position:relative;overflow:hidden;
+}
+/* subtle dot grid */
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background-image:radial-gradient(circle,rgba(22,85,245,.18) 1px,transparent 1px);
+  background-size:28px 28px;
+}
+/* glowing orbs */
+.hero::after{
+  content:'';position:absolute;
+  width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(74,134,255,.18) 0%,transparent 70%);
+  top:-120px;right:-80px;pointer-events:none;
+}
+.hero-inner{
+  max-width:880px;margin:0 auto;position:relative;z-index:1;
+  display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(22,85,245,.25);border:1px solid rgba(22,85,245,.4);
+  color:var(--blue2);padding:4px 12px;border-radius:999px;
+  font-size:.75rem;font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:1rem;
+}
+.hero h1{font-size:3rem;font-weight:800;color:#fff;line-height:1.1;letter-spacing:-.8px;margin-bottom:.9rem}
+.hero h1 em{color:var(--cyan);font-style:normal}
+.hero-sub{color:rgba(255,255,255,.75);font-size:1rem;line-height:1.75;font-weight:300;max-width:380px;margin-bottom:2rem}
+.hero-chips{display:flex;gap:.5rem;flex-wrap:wrap}
+.hchip{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  color:rgba(255,255,255,.8);padding:4px 12px;border-radius:6px;
+  font-size:.78rem;font-weight:500;
+}
+
+/* mini map in hero */
+.hero-map{
+  border-radius:16px;overflow:hidden;
+  border:1.5px solid rgba(255,255,255,.15);
+  box-shadow:0 20px 60px rgba(0,0,0,.35);
+  position:relative;height:240px;
+}
+#mini-map{width:100%;height:100%}
+.map-overlay{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(to top,rgba(11,31,75,.85) 0%,transparent 100%);
+  padding:.8rem 1rem;display:flex;align-items:flex-end;justify-content:space-between;
+}
+.mo-stat{text-align:center}
+.mo-n{font-size:1.4rem;font-weight:700;color:#fff}
+.mo-l{font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.65)}
+
+/* ═══════ FORM SECTION ══════════════════════════════════ */
+.form-section{max-width:740px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+
+/* floating label above the card */
+.form-eyebrow{
+  display:flex;align-items:center;gap:.5rem;
+  font-size:.9rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;
+  color:var(--blue);margin-bottom:.8rem;
+}
+.form-eyebrow::before{content:'';flex:1;height:1px;background:var(--border)}
+.form-eyebrow::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.form-card{
+  background:var(--white);border-radius:20px;
+  border:1px solid var(--border);box-shadow:var(--shlg);overflow:hidden;
+}
+
+/* coloured top strip */
+.card-header{
+  background:linear-gradient(90deg,var(--blue),var(--blue2));
+  padding:1.1rem 1.8rem;display:flex;align-items:center;gap:.8rem;
+}
+.card-header-ico{
+  width:38px;height:38px;border-radius:10px;
+  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+}
+.card-header h2{font-size:1.1rem;font-weight:700;color:#fff;letter-spacing:-.1px}
+.card-header p{font-size:.82rem;color:rgba(255,255,255,.75);margin-top:2px}
+
+.card-body{padding:2rem 1.8rem}
+
+/* section headers inside form */
+.sec{
+  display:flex;align-items:center;gap:8px;
+  font-size:.96rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:var(--blue);padding-bottom:.6rem;margin-bottom:1rem;
+  border-bottom:2px solid var(--surf);
+}
+.sec-badge{
+  width:20px;height:20px;border-radius:5px;
+  background:var(--blue);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:.96rem;font-weight:800;
+}
+
+.fg{display:flex;flex-direction:column;gap:.35rem;margin-bottom:1.1rem}
+label{font-size:.96rem;font-weight:600;color:var(--t2)}
+label .opt{font-weight:400;color:var(--t3)}
+
+input[type=text],input[type=number],textarea{
+  background:var(--bg);border:1.5px solid var(--border);color:var(--text);
+  border-radius:10px;padding:.7rem 1rem;
+  font-family:var(--font);font-size:.96rem;outline:none;width:100%;
+  transition:border-color .15s,box-shadow .15s,background .15s;
+}
+input[type=text]:focus,input[type=number]:focus,textarea:focus{
+  border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,85,245,.1);background:#fff;
+}
+input::placeholder,textarea::placeholder{color:var(--t3)}
+textarea{resize:vertical;min-height:110px;line-height:1.65}
+
+/* voice */
+.v-wrap{position:relative}
+.v-wrap textarea{padding-right:3rem}
+.v-btn{
+  position:absolute;right:.55rem;top:.55rem;
+  width:30px;height:30px;border-radius:7px;
+  border:1.5px solid var(--b2);background:#fff;color:var(--t3);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:13px;transition:all .15s;
+}
+.v-btn:hover{background:var(--surf);border-color:var(--blue);color:var(--blue)}
+.v-btn.rec{background:var(--red-lt);border-color:var(--red);color:var(--red);animation:rpulse 1s infinite}
+@keyframes rpulse{0%,100%{box-shadow:0 0 0 0 rgba(229,53,43,.3)}50%{box-shadow:0 0 0 6px rgba(229,53,43,0)}}
+.v-st{font-size:.78rem;margin-top:.3rem;color:var(--t3);min-height:.9rem}
+.v-st.on{color:var(--red);font-weight:600}
+
+/* upload */
+.upzone{
+  border:2px dashed var(--b2);border-radius:12px;padding:1.4rem 1rem;
+  text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--bg);
+}
+.upzone:hover,.upzone.over{border-color:var(--blue);background:var(--surf)}
+.upzone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.up-ico{font-size:1.8rem;margin-bottom:.35rem}
+.up-tx{font-size:.88rem;font-weight:600;color:var(--t2);margin-bottom:.2rem}
+.up-hint{font-size:.76rem;color:var(--t3)}
+.img-prev{margin-top:.7rem;display:none;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);position:relative}
+.img-prev img{width:100%;max-height:200px;object-fit:cover;display:block}
+.img-rm{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:5px;padding:2px 7px;font-size:.7rem;cursor:pointer;font-family:var(--font)}
+.img-rm:hover{background:var(--red)}
+
+/* location */
+.loc-box{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1.1rem}
+.loc-map-wrap{width:100%;height:200px;border-radius:9px;overflow:hidden;border:1.5px solid var(--border);margin-bottom:.85rem;cursor:crosshair;position:relative}
+#picker-map{width:100%;height:100%}
+.map-tip{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:7px;padding:4px 12px;font-size:.69rem;color:var(--t2);pointer-events:none;white-space:nowrap;box-shadow:var(--sh);transition:opacity .3s;z-index:500}
+.map-tip.off{opacity:0}
+.coord-row{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:.8rem}
+.cf label{font-size:.68rem;font-weight:700;color:var(--t3);margin-bottom:.22rem;display:block;text-transform:uppercase;letter-spacing:.4px}
+.cf input{font-size:.82rem;padding:.55rem .85rem;background:#fff;border-color:var(--border);color:var(--t2);cursor:default}
+
+/* autocomplete */
+.ar{position:relative}
+.ac-dd{position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:9999;background:#fff;border:1.5px solid var(--blue);border-radius:0 0 11px 11px;list-style:none;margin:0;padding:0;box-shadow:0 8px 24px rgba(22,85,245,.15);max-height:240px;overflow-y:auto}
+.ac-dd li{padding:.6rem 1rem;font-size:.81rem;color:var(--t2);cursor:pointer;border-bottom:1px solid var(--border);line-height:1.35;transition:background .1s}
+.ac-dd li:last-child{border-bottom:none}
+.ac-dd li:hover,.ac-dd li.hi{background:var(--surf);color:var(--blue)}
+.ac-dd li strong{color:var(--text);font-weight:600;display:block}
+.ac-dd li small{font-size:.68rem;color:var(--t3);display:block;margin-top:1px}
+.ac-ld{padding:.7rem 1rem;font-size:.78rem;color:var(--t3);font-style:italic;list-style:none}
+
+.gps-btn{
+  width:100%;background:linear-gradient(135deg,var(--blue),var(--blue2));
+  color:#fff;border:none;padding:.72rem 1rem;border-radius:10px;
+  font-family:var(--font);font-size:.9rem;font-weight:600;cursor:pointer;
+  transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 3px 14px rgba(22,85,245,.3);letter-spacing:-.1px;
+}
+.gps-btn:hover:not(:disabled){box-shadow:0 5px 20px rgba(22,85,245,.4);transform:translateY(-1px)}
+.gps-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.loc-msg{font-size:.73rem;padding:6px 10px;border-radius:7px;margin-top:.6rem;display:none;line-height:1.45;font-weight:500}
+.lok{background:var(--greenlt);color:var(--greendk);border:1px solid #a7f3d0;font-size:.78rem}
+.lerr{background:var(--red-lt);color:#b71c1c;border:1px solid var(--red-mid);font-size:.78rem}
+.linf{background:var(--surf);color:var(--blue);border:1px solid var(--b2);font-size:.78rem}
+
+/* submit footer */
+.card-foot{
+  background:var(--bg);border-top:1px solid var(--border);
+  padding:1.1rem 1.8rem;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:.8rem;
+}
+.priv{font-size:.78rem;color:var(--t3);display:flex;align-items:center;gap:5px}
+.sub-btn{
+  background:linear-gradient(135deg,var(--blue),var(--navy));
+  color:#fff;border:none;padding:.8rem 2.2rem;border-radius:var(--r);
+  font-family:var(--font);font-size:.9rem;font-weight:700;cursor:pointer;
+  transition:all .18s;display:flex;align-items:center;gap:8px;
+  box-shadow:0 4px 18px rgba(22,85,245,.35);min-width:160px;justify-content:center;letter-spacing:-.1px;
+}
+.sub-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 24px rgba(22,85,245,.45)}
+.sub-btn:disabled{opacity:.55;pointer-events:none}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;animation:spin .6s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ═══════ HOW IT WORKS ══════════════════════════════════ */
+.hiw{max-width:740px;margin:0 auto;padding:0 1.5rem 5rem}
+.hiw-hd{text-align:center;margin-bottom:1.8rem}
+.hiw-hd h2{font-size:1.8rem;font-weight:800;color:var(--text);margin-bottom:.3rem}
+.hiw-hd p{font-size:.92rem;color:var(--t2)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.step{
+  background:var(--white);border:1px solid var(--border);border-radius:14px;
+  padding:1.2rem 1rem;box-shadow:var(--sh);position:relative;overflow:hidden;transition:all .2s;
+}
+.step::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.step:hover{box-shadow:var(--shlg);transform:translateY(-3px)}
+.step-ico{font-size:1.5rem;margin-bottom:.4rem}
+.sn{width:20px;height:20px;border-radius:5px;background:var(--blue);color:#fff;font-size:.65rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;margin-bottom:.4rem}
+.step h4{font-size:.95rem;font-weight:700;margin-bottom:.2rem;color:var(--text)}
+.step p{font-size:.8rem;color:var(--t2);line-height:1.55}
+
+/* ═══════ MODAL ═════════════════════════════════════════ */
+.mb{position:fixed;inset:0;background:rgba(11,18,36,.5);backdrop-filter:blur(8px);z-index:1000;display:none;align-items:center;justify-content:center}
+.mb.show{display:flex;animation:fu .22s ease}
+@keyframes fu{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.modal{background:#fff;border-radius:20px;padding:2.2rem;max-width:420px;width:90%;text-align:center;box-shadow:var(--shxl)}
+.mi{width:56px;height:56px;border-radius:50%;margin:0 auto .9rem;display:flex;align-items:center;justify-content:center;font-size:1.45rem}
+.ok{background:var(--greenlt);border:2px solid #6ee7b7}
+.er{background:var(--red-lt);border:2px solid var(--red-mid)}
+.modal h3{font-size:1.45rem;font-weight:800;margin-bottom:.3rem}
+.modal p{color:var(--t2);font-size:.9rem;line-height:1.65;margin-bottom:1rem}
+.cid{background:var(--bg);border:1.5px dashed var(--b2);border-radius:9px;padding:.6rem 1rem;font-family:var(--mono);font-size:1rem;color:var(--blue);letter-spacing:1px;margin-bottom:.9rem;display:none}
+.mtags{display:flex;justify-content:center;gap:.35rem;flex-wrap:wrap;margin-bottom:1rem}
+.tag{padding:.22rem .65rem;border-radius:999px;font-size:.68rem;font-weight:700}
+.tb{background:var(--surf);color:var(--blue);border:1px solid var(--b2)}
+.tr{background:var(--red-lt);color:var(--red);border:1px solid var(--red-mid)}
+.ta{background:var(--amberlt);color:var(--amber);border:1px solid #fcd34d}
+.tg{background:var(--greenlt);color:var(--greendk);border:1px solid #86efac}
+.mbtn{background:linear-gradient(135deg,var(--blue),var(--navy));color:#fff;border:none;padding:.7rem 1.8rem;border-radius:var(--r);font-size:.86rem;font-weight:700;cursor:pointer;font-family:var(--font);box-shadow:0 3px 12px rgba(22,85,245,.3)}
+.mbtn:hover{opacity:.9}
+
+/* ═══════ ALERT BAR ═════════════════════════════════════ */
+#ab{position:fixed;bottom:0;left:0;right:0;z-index:400;background:linear-gradient(90deg,#7f1d1d,var(--red));color:#fff;padding:.65rem 1.5rem;display:none;align-items:center;justify-content:space-between;border-top:2px solid #ffb3ad;animation:su .35s ease}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+#ab.on{display:flex}
+.ab-l{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:500}
+.ab-d{width:7px;height:7px;border-radius:50%;background:#fff;animation:blink 1s infinite}
+.ab-x{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.25rem .65rem;border-radius:5px;cursor:pointer;font-size:.73rem;font-weight:600}
+
+footer{border-top:1px solid var(--border);padding:1.2rem 2rem;text-align:center;color:var(--t3);font-size:.82rem;background:var(--white)}
+footer a{color:var(--blue);text-decoration:none;font-weight:500}
+
+@media(max-width:800px){.hero-inner{grid-template-columns:1fr}.hero-map{display:none}.hero h1{font-size:2.4rem}}
+@media(max-width:600px){.steps{grid-template-columns:1fr 1fr}.coord-row{grid-template-columns:1fr}.card-foot{flex-direction:column;align-items:stretch}.sub-btn{width:100%}}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAVBAR ═══════════════════════════════════════ -->
+<nav class="navbar">
+  <a href="/" class="nb-logo">
+    <div class="nb-mark">🏙</div>
+    <span class="nb-name">Civic<span> Intel</span></span>
+  </a>
+  <div class="nb-center">
+    <a href="/" class="on">Report</a>
+    <a href="/map-view">Live Map</a>
+  </div>
+  <div class="nb-right">
+    <div class="nb-pill"><span class="nb-pill-dot"></span>Live</div>
+    <a href="/admin" class="nb-admin">Admin ↗</a>
+  </div>
+</nav>
+
+<!-- ═══ HERO ══════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-badge">🏙 AI Smart City Platform</div>
+      <h1>Report City Issues.<br><em>AI Fixes Them.</em></h1>
+      <p class="hero-sub">Submit a complaint with photo and voice — our AI instantly classifies, prioritises and routes it to the right government department.</p>
+      <div class="hero-chips">
+        <span class="hchip">📸 Photo Proof</span>
+        <span class="hchip">🎤 Voice Input</span>
+        <span class="hchip">🗺 Live Map</span>
+        <span class="hchip">🤖 AI Routing</span>
+      </div>
+    </div>
+    <div class="hero-map">
+      <div id="mini-map"></div>
+      <div class="map-overlay">
+        <div class="mo-stat"><div class="mo-n" id="mn-total">—</div><div class="mo-l">Reports</div></div>
+        <div class="mo-stat"><div class="mo-n" id="mn-crit">—</div><div class="mo-l">Critical</div></div>
+        <div class="mo-stat"><div class="mo-n" id="mn-zones">—</div><div class="mo-l">Alert Zones</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FORM ══════════════════════════════════════════ -->
+<div class="form-section">
+  <div class="form-eyebrow">File a New Complaint</div>
+  <div class="form-card">
+
+    <div class="card-header">
+      <div class="card-header-ico">📋</div>
+      <div>
+        <h2>Complaint Registration</h2>
+        <p>All fields marked * are required — AI handles classification automatically</p>
+      </div>
+    </div>
+
+    <div class="card-body">
+
+      <!-- STEP 1 -->
+      <div class="sec"><div class="sec-badge">1</div>Complaint Details</div>
+      <div class="fg">
+        <label for="inp-name">Full Name <span class="opt">(optional)</span></label>
+        <input type="text" id="inp-name" placeholder="e.g. Ramesh Kumar">
+      </div>
+      <div class="fg">
+        <label for="inp-text">Describe the Problem <span style="color:var(--red)">*</span></label>
+        <div class="v-wrap">
+          <textarea id="inp-text" placeholder="What is the issue? Where exactly? How severe? How long has it been there?"></textarea>
+          <button class="v-btn" id="vbtn" type="button" onclick="toggleVoice()" title="Voice input (mic)">🎤</button>
+        </div>
+        <div class="v-st" id="vst"></div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="sec" style="margin-top:1.4rem"><div class="sec-badge">2</div>Photo Proof <span style="font-size:.66rem;font-weight:400;text-transform:none;letter-spacing:0;color:var(--t3)">(optional)</span></div>
+      <div class="fg">
+        <div class="upzone" id="upz">
+          <input type="file" id="inp-img" accept="image/*" onchange="prevImg(this)">
+          <div class="up-ico">📸</div>
+          <div class="up-tx">Click or drag &amp; drop a photo</div>
+          <div class="up-hint">JPG, PNG, WEBP · max 8 MB</div>
+        </div>
+        <div class="img-prev" id="imgprev">
+          <img id="imgt" src="" alt="">
+          <button class="img-rm" onclick="rmImg()">✕ Remove</button>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="sec" style="margin-top:1.4rem"><div class="sec-badge">3</div>Your Location</div>
+      <div class="loc-box">
+        <div class="loc-map-wrap">
+          <div id="picker-map"></div>
+          <div class="map-tip" id="maptip">🖱 Click the map to pin your exact location</div>
+        </div>
+        <div class="coord-row">
+          <div class="cf"><label for="inp-lat">Latitude</label><input type="number" id="inp-lat" placeholder="22.7196" step="0.000001" readonly></div>
+          <div class="cf"><label for="inp-lng">Longitude</label><input type="number" id="inp-lng" placeholder="75.8577" step="0.000001" readonly></div>
+        </div>
+        <div class="fg" style="margin-bottom:.7rem">
+          <label for="inp-area">Search Area / Address</label>
+          <div class="ar">
+            <input type="text" id="inp-area" placeholder="Type e.g. Vijay Nagar Indore…" style="background:#fff" autocomplete="off">
+            <ul id="acd" class="ac-dd" style="display:none"></ul>
+          </div>
+          <div style="font-size:.76rem;color:var(--t3);margin-top:.3rem">Type and select from dropdown</div>
+        </div>
+        <button class="gps-btn" id="gpsbtn" type="button" onclick="doGPS()">
+          📡&nbsp;<span id="gpslbl">Detect My GPS Location</span>
+        </button>
+        <div class="loc-msg" id="locmsg"></div>
+      </div>
+
+    </div><!-- card-body -->
+
+    <div class="card-foot">
+      <div class="priv">🔒 Data kept private &amp; secure</div>
+      <button class="sub-btn" id="subbtn" type="button" onclick="doSubmit()">
+        <span class="spin" id="spin"></span>
+        <span id="subtxt">Submit Complaint →</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HOW IT WORKS ══════════════════════════════════ -->
+<div class="hiw">
+  <div class="hiw-hd"><h2>How It Works</h2><p>From submission to resolution — powered by AI</p></div>
+  <div class="steps">
+    <div class="step"><div class="step-ico">📸</div><div class="sn">1</div><h4>You Submit</h4><p>Describe issue, attach photo and pin location on map.</p></div>
+    <div class="step"><div class="step-ico">🧠</div><div class="sn">2</div><h4>AI Classifies</h4><p>AI identifies Road, Water, Electricity, Sanitation or Safety.</p></div>
+    <div class="step"><div class="step-ico">⚡</div><div class="sn">3</div><h4>Priority Set</h4><p>ML predicts Critical, Moderate or Normal instantly.</p></div>
+    <div class="step"><div class="step-ico">🗺</div><div class="sn">4</div><h4>Navigate &amp; Fix</h4><p>Admin sees it on map and navigates to the exact spot.</p></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="mb" id="modal">
+  <div class="modal">
+    <div class="mi" id="mi">✓</div>
+    <h3 id="mt"></h3><p id="md"></p>
+    <div class="cid" id="mcid"></div>
+    <div class="mtags" id="mtags"></div>
+    <button class="mbtn" onclick="closeM()">Close</button>
+  </div>
+</div>
+
+<!-- ALERT BANNER -->
+<div id="ab">
+  <div class="ab-l"><span class="ab-d"></span><strong>🔴 RED ALERT:</strong><span id="abt">Critical complaints detected!</span></div>
+  <button class="ab-x" onclick="this.parentElement.classList.remove('on')">✕</button>
+</div>
+
+<footer>Civic Intel — Smart City Intelligence &nbsp;·&nbsp;<a href="/map-view">Live Map →</a> &nbsp;·&nbsp;<a href="/admin">Admin Dashboard →</a></footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ── MINI MAP ────────────────────────────────────── */
+const mm=L.map('mini-map',{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false}).setView([22.7196,75.8577],12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(mm);
+async function loadMM(){
+  try{
+    const r=await fetch('/map-data'),d=await r.json();
+    const g=d.complaints.filter(c=>!c.is_fake);
+    g.forEach(c=>{const col={Critical:'#e5352b',Moderate:'#f59e0b',Normal:'#16a34a'}[c.priority]||'#1655f5';L.circleMarker([c.latitude,c.longitude],{radius:5,color:col,fillColor:col,fillOpacity:.8,weight:1}).addTo(mm)});
+    document.getElementById('mn-total').textContent=g.length;
+    document.getElementById('mn-crit').textContent=g.filter(c=>c.priority==='Critical').length;
+    document.getElementById('mn-zones').textContent=d.red_alert_zones.length;
+    if(g.length>1)mm.fitBounds(L.latLngBounds(g.map(c=>[c.latitude,c.longitude])),{padding:[20,20],maxZoom:14});
+    if(d.red_alert_zones.length){const z=d.red_alert_zones[0];document.getElementById('abt').textContent=d.red_alert_zones.length+' alert zone(s) — '+z.complaint_count+' critical near '+(z.area_name||'area');document.getElementById('ab').classList.add('on')}
+  }catch(e){}
+}
+loadMM();
+
+/* ── PICKER MAP ──────────────────────────────────── */
+const DEF=[22.7196,75.8577];
+const pm=L.map('picker-map',{center:DEF,zoom:13,zoomControl:true,attributionControl:false});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(pm);
+const PI=L.divIcon({html:`<div style="width:20px;height:20px;border-radius:50%;background:#1655f5;border:3px solid #fff;box-shadow:0 2px 10px rgba(22,85,245,.6)"></div>`,className:'',iconSize:[20,20],iconAnchor:[10,10]});
+let pin=null;
+function dropPin(lat,lng){
+  if(pin)pm.removeLayer(pin);
+  pin=L.marker([lat,lng],{icon:PI,draggable:true}).addTo(pm);
+  pin.on('drag',e=>{setC(e.target.getLatLng().lat,e.target.getLatLng().lng)});
+  pin.on('dragend',e=>{const l=e.target.getLatLng();setC(l.lat,l.lng);showLM('ok','📍 Updated. Drag to fine-tune.')});
+  setC(lat,lng);document.getElementById('maptip').classList.add('off');
+}
+function setC(a,b){document.getElementById('inp-lat').value=a.toFixed(6);document.getElementById('inp-lng').value=b.toFixed(6)}
+pm.on('click',e=>{dropPin(e.latlng.lat,e.latlng.lng);showLM('ok','📍 Pinned at '+e.latlng.lat.toFixed(4)+', '+e.latlng.lng.toFixed(4)+' — drag to adjust')});
+
+/* ── AUTOCOMPLETE ────────────────────────────────── */
+let acT=null,acR=[],acI=-1;
+function lbl(item){const a=item.address||{};const p=a.suburb||a.neighbourhood||a.quarter||a.residential||a.hamlet||a.village||a.road||item.name||'';const c=a.city||a.town||a.county||'';const s=a.state||'';return[p,c,s].filter((x,i,ar)=>x&&ar.indexOf(x)===i).join(', ')||item.display_name.split(',').slice(0,3).join(',').trim()}
+async function fetchAC(q){const p=new URLSearchParams({q:/india/i.test(q)?q:q+', India',format:'json',limit:'8',addressdetails:'1',countrycodes:'in',viewbox:'68.1,6.7,97.4,35.6',bounded:'0'});const r=await fetch('https://nominatim.openstreetmap.org/search?'+p,{headers:{'User-Agent':'CivicIntel/1.0','Accept-Language':'en'},signal:AbortSignal.timeout(6000)});if(!r.ok)return[];const d=await r.json();return Array.isArray(d)?d:[]}
+function renderAC(res){const ul=document.getElementById('acd');acR=res;acI=-1;if(!res.length){ul.innerHTML='<li class="ac-ld">No results — try adding city name</li>';ul.style.display='block';return}ul.innerHTML=res.map((it,i)=>'<li data-i="'+i+'"><strong>'+lbl(it)+'</strong>'+(((it.address||{}).postcode)?'<small>PIN '+(it.address||{}).postcode+'</small>':'')+'</li>').join('');ul.style.display='block';ul.querySelectorAll('li[data-i]').forEach(li=>li.addEventListener('mousedown',e=>{e.preventDefault();pickAC(+li.dataset.i)}))}
+function pickAC(i){const it=acR[i];if(!it)return;const lat=parseFloat(it.lat),lng=parseFloat(it.lon);document.getElementById('inp-area').value=lbl(it);closeAC();dropPin(lat,lng);pm.setView([lat,lng],16);showLM('ok','✅ '+lbl(it)+'  ('+lat.toFixed(5)+', '+lng.toFixed(5)+')')}
+function closeAC(){const ul=document.getElementById('acd');ul.style.display='none';ul.innerHTML='';acR=[];acI=-1}
+function acKey(e){const ul=document.getElementById('acd');if(!ul||ul.style.display==='none')return;if(e.key==='ArrowDown'){e.preventDefault();acI=Math.min(acI+1,acR.length-1);acHL()}else if(e.key==='ArrowUp'){e.preventDefault();acI=Math.max(acI-1,0);acHL()}else if(e.key==='Enter'){e.preventDefault();if(acR.length)pickAC(acI>=0?acI:0)}else if(e.key==='Escape')closeAC()}
+function acHL(){document.querySelectorAll('#acd li').forEach((li,i)=>{li.classList.toggle('hi',i===acI);if(i===acI)li.scrollIntoView({block:'nearest'})})}
+document.addEventListener('DOMContentLoaded',()=>{
+  const inp=document.getElementById('inp-area');if(!inp)return;
+  inp.addEventListener('input',function(){clearTimeout(acT);const v=this.value.trim();if(v.length<3){closeAC();return}const ul=document.getElementById('acd');ul.innerHTML='<li class="ac-ld">🔍 Searching…</li>';ul.style.display='block';acT=setTimeout(async()=>{try{renderAC(await fetchAC(v))}catch(e){closeAC()}},400)});
+  inp.addEventListener('keydown',acKey);document.addEventListener('click',e=>{if(!e.target.closest('.ar'))closeAC()});inp.addEventListener('blur',()=>setTimeout(closeAC,200));
+});
+
+/* ── GPS ─────────────────────────────────────────── */
+function doGPS(){
+  const btn=document.getElementById('gpsbtn'),lb=document.getElementById('gpslbl');
+  btn.disabled=true;lb.textContent='Detecting…';showLM('inf','📡 Getting GPS location…');
+  if(!navigator.geolocation){btn.disabled=false;lb.textContent='Detect My GPS Location';showLM('err','⚠ GPS not supported. Click the map to pin.');return}
+  navigator.geolocation.getCurrentPosition(
+    p=>{dropPin(p.coords.latitude,p.coords.longitude);pm.setView([p.coords.latitude,p.coords.longitude],16);btn.disabled=false;lb.textContent='✅ Detected';showLM('ok','✅ '+p.coords.latitude.toFixed(5)+', '+p.coords.longitude.toFixed(5)+' (±'+Math.round(p.coords.accuracy)+'m)');setTimeout(()=>lb.textContent='Detect My GPS Location',4000)},
+    e=>{btn.disabled=false;lb.textContent='Detect My GPS Location';showLM('err',e.code===1?'⚠ Permission denied. Allow location, or click the map.':'⚠ GPS unavailable. Click the map.')},
+    {enableHighAccuracy:true,timeout:10000,maximumAge:0}
+  );
+}
+function showLM(t,m){const el=document.getElementById('locmsg');el.textContent=m;el.className='loc-msg '+(t==='ok'?'lok':t==='err'?'lerr':'linf');el.style.display='block'}
+
+/* ── IMAGE ───────────────────────────────────────── */
+function prevImg(inp){const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=e=>{document.getElementById('imgt').src=e.target.result;document.getElementById('imgprev').style.display='block';document.getElementById('upz').style.borderColor='var(--blue)'};rd.readAsDataURL(f)}
+function rmImg(){document.getElementById('inp-img').value='';document.getElementById('imgt').src='';document.getElementById('imgprev').style.display='none';document.getElementById('upz').style.borderColor=''}
+const uz=document.getElementById('upz');
+if(uz){uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('over')});uz.addEventListener('dragleave',()=>uz.classList.remove('over'));uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('over');const f=e.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);document.getElementById('inp-img').files=dt.files;prevImg(document.getElementById('inp-img'))}})}
+
+/* ── VOICE ───────────────────────────────────────── */
+let aRec=null;
+function toggleVoice(){
+  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){document.getElementById('vst').textContent='⚠ Voice not supported. Use Chrome or Edge.';return}
+  const btn=document.getElementById('vbtn');
+  if(btn.classList.contains('rec')){if(aRec){aRec.stop();aRec=null}btn.classList.remove('rec');btn.textContent='🎤';document.getElementById('vst').textContent='';document.getElementById('vst').className='v-st';return}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;const rc=new SR();rc.lang='en-IN';rc.interimResults=true;rc.continuous=false;aRec=rc;
+  btn.classList.add('rec');btn.textContent='⏹';const sEl=document.getElementById('vst');sEl.textContent='🎙 Listening…';sEl.className='v-st on';
+  rc.onresult=e=>{let in_='',fn='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)fn+=e.results[i][0].transcript;else in_+=e.results[i][0].transcript}const ta=document.getElementById('inp-text');if(fn)ta.value=(ta.value+' '+fn).trim();sEl.textContent=in_?'🎙 "'+in_+'"':'🎙 Listening…'};
+  rc.onerror=e=>{btn.classList.remove('rec');btn.textContent='🎤';aRec=null;sEl.textContent='⚠ '+(e.error==='not-allowed'?'Mic permission denied':e.error);sEl.className='v-st'};
+  rc.onend=()=>{btn.classList.remove('rec');btn.textContent='🎤';aRec=null;if(sEl.textContent.startsWith('🎙')){sEl.textContent='✅ Recorded';sEl.className='v-st'}};
+  rc.start();
+}
+
+/* ── SUBMIT ──────────────────────────────────────── */
+async function doSubmit(){
+  const tx=document.getElementById('inp-text').value.trim();
+  const la=document.getElementById('inp-lat').value,lo=document.getElementById('inp-lng').value;
+  const ar=document.getElementById('inp-area').value.trim();
+  const nm=document.getElementById('inp-name').value.trim()||'Anonymous';
+  const imgF=document.getElementById('inp-img').files[0];
+  if(tx.length<10){showM('err','Too Short','Please describe the issue in at least 10 characters.');return}
+  if(!la||!lo){showM('err','Location Missing','Click the map or press GPS to set your location.');return}
+  const btn=document.getElementById('subbtn');
+  document.getElementById('spin').style.display='block';document.getElementById('subtxt').textContent='Submitting…';btn.disabled=true;
+  try{
+    const fd=new FormData();fd.append('text',tx);fd.append('latitude',la);fd.append('longitude',lo);fd.append('area_name',ar);fd.append('submitter',nm);fd.append('voice_note',tx);if(imgF)fd.append('image',imgF);
+    const res=await fetch('/submit',{method:'POST',body:fd});const d=await res.json();
+    if(d.error){showM('err','Error',d.error);return}
+    showM('ok','Complaint Registered!','Assigned to: '+d.department,d.complaint_id,[
+      '<span class="tag tb">'+d.category+'</span>',
+      '<span class="tag '+(d.priority==='Critical'?'tr':d.priority==='Moderate'?'ta':'tg')+'">'+d.priority+' Priority</span>',
+      '<span class="tag '+(d.is_fake?'tr':'tg')+'">'+(d.is_fake?'⚠ Possibly Fake':'✓ Genuine')+'</span>',
+    ]);
+    ['inp-text','inp-area','inp-name'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('inp-lat').value='';document.getElementById('inp-lng').value='';
+    rmImg();document.getElementById('locmsg').style.display='none';document.getElementById('maptip').classList.remove('off');
+    if(pin){pm.removeLayer(pin);pin=null}pm.setView(DEF,13);loadMM();
+  }catch(e){showM('err','Network Error','Could not reach the server.')}
+  finally{btn.disabled=false;document.getElementById('spin').style.display='none';document.getElementById('subtxt').textContent='Submit Complaint →'}
+}
+
+/* ── MODAL ───────────────────────────────────────── */
+function showM(t,title,desc,cid,tags){
+  const i=document.getElementById('mi');i.textContent=t==='ok'?'✓':'✕';i.className='mi '+(t==='ok'?'ok':'er');
+  document.getElementById('mt').textContent=title;document.getElementById('md').textContent=desc;
+  const c=document.getElementById('mcid');if(cid){c.textContent=cid;c.style.display='block'}else c.style.display='none';
+  document.getElementById('mtags').innerHTML=(tags||[]).join('');document.getElementById('modal').classList.add('show');
+}
+function closeM(){document.getElementById('modal').classList.remove('show')}
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeM()});
+</script>
+</body>
+</html>
